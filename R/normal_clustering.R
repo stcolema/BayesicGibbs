@@ -3,7 +3,8 @@
 # === Functions ================================================================
 
 # --- MCMC analysis ------------------------------------------------------------
-#' Find the point at which entropy stabilises in the iterations.
+#' @title entropy_window
+#' @description  Find the point at which entropy stabilises in the iterations.
 #' 
 #' @param entropy_vec A vector of numbers corresponding to entropy of each 
 #' iteration.
@@ -91,8 +92,9 @@ empirical_bayes_initialise <- function(data, mu_0, df_0, scale_0, N, k, d) {
   return(parameters)
 }
 
-# Carries out gibbs sampling of data and returns a similarity matrix for points
-
+#' @title Gibbs sampling
+#' @description Carries out gibbs sampling of data and returns a similarity matrix for points
+#'
 #' @param data A matrix of the data being analysed.
 #' @param k The number of clusters.
 #' @param class_labels A vector of unsigned integers representing the initial 
@@ -205,7 +207,8 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
 
 # --- Categorical clustering ---------------------------------------------------
 
-#' Generates a prior for the phi vector for each variable for the Dirichlet 
+#' @title Phi prior
+#' @description Generates a prior for the phi vector for each variable for the Dirichlet 
 #' distribution
 #' 
 #' @param matrix_data A matrix of data
@@ -223,7 +226,8 @@ phi_prior <- function(matrix_data) {
 }
 
 # --- Heatmap ------------------------------------------------------------------
-#' Returns and prints an annotated pheatmap
+#' @title Annotated Heatmap
+#' @description Returns and prints an annotated pheatmap
 #' 
 #' @param input_data A matrix of data to be heat mapped. Needs column and 
 #' rownames.
@@ -234,6 +238,7 @@ phi_prior <- function(matrix_data) {
 #' this has no impact. Default is NULL in which case no sorting occurs.
 #' @param train If FALSE returns normal pheatmap.
 #' @param ... The usual inputs for pheatmap.
+#' @return An annotated pheatmap from the pheatmap package
 annotated_heatmap <- function(input_data, annotation_row = NULL,
                               sort_by_col = NULL,
                               train = NULL,
@@ -340,7 +345,8 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 }
 
 # === Wrapper ==================================================================
-#' Returns mean, variance and similarity posteriors from Gibbs sampling with
+#' @title MCMC out
+#' @description Returns mean, variance and similarity posteriors from Gibbs sampling with
 #' option of pheatmap
 #' 
 #' @param MS_object A dataset in the format used by pRolocdata.

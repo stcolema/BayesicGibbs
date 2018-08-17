@@ -2,7 +2,7 @@
 % Please edit documentation in R/normal_clustering.R
 \name{annotated_heatmap}
 \alias{annotated_heatmap}
-\title{Returns and prints an annotated pheatmap}
+\title{Annotated Heatmap}
 \usage{
 annotated_heatmap(input_data, annotation_row = NULL,
   sort_by_col = NULL, train = NULL, ...)
@@ -21,6 +21,9 @@ this has no impact. Default is NULL in which case no sorting occurs.}
 \item{train}{If FALSE returns normal pheatmap.}
 
 \item{...}{The usual inputs for pheatmap.}
+}
+\value{
+An annotated pheatmap from the pheatmap package
 }
 \description{
 Returns and prints an annotated pheatmap

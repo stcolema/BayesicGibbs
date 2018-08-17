@@ -25,3 +25,4 @@ Imports:
 Suggests:pRolocData
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.0
+Encoding: UTF-8

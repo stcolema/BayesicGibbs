@@ -2,8 +2,7 @@
 % Please edit documentation in R/normal_clustering.R
 \name{mcmc_out}
 \alias{mcmc_out}
-\title{Returns mean, variance and similarity posteriors from Gibbs sampling with
-option of pheatmap}
+\title{MCMC out}
 \usage{
 mcmc_out(MS_object, class_labels_0 = NULL, mu_0 = NULL, df_0 = NULL,
   scale_0 = NULL, lambda_0 = 0.01, concentration_0 = 0.1,

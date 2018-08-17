@@ -2,7 +2,7 @@
 % Please edit documentation in R/normal_clustering.R
 \name{entropy_window}
 \alias{entropy_window}
-\title{Find the point at which entropy stabilises in the iterations.}
+\title{entropy_window}
 \usage{
 entropy_window(entropy_vec, start = 1, window_length = 25,
   mean_tolerance = 0.001, sd_tolerance = 0.001)

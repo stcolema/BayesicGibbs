@@ -24,7 +24,4 @@ matrix_data.
 \description{
 Generates a prior for the phi vector for each variable for the Dirichlet 
 distribution
-
-Generates a prior for the phi vector for each variable for the Dirichlet 
-distribution
 }
