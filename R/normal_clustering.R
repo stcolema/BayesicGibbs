@@ -215,6 +215,11 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
 #' @return A list of vectors of the proportion of each level across all of 
 #' matrix_data.
 phi_prior <- function(matrix_data) {
+  
+  # lambda function applies ``table'' to each column of matr_data before 
+  # removing names. This ensures the same output type for the case when all 
+  # variables have the same number of levels and when they do not (rather than
+  # merely using one or two lapply's of table)
   unnamed_list_prop <- lapply(
     1:ncol(matrix_data),
     function(i) {
