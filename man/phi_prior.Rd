@@ -12,7 +12,7 @@ phi_prior(matrix_data)
 \arguments{
 \item{matrix_data}{A matrix of data}
 
-\item{matrix_data}{A matrix of data}
+\item{matrix_data}{A matrix of data.}
 }
 \value{
 A list of vectors of the proportion of each level across all of 

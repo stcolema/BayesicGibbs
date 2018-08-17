@@ -206,12 +206,10 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
 }
 
 # --- Categorical clustering ---------------------------------------------------
-
 #' @title Phi prior
 #' @description Generates a prior for the phi vector for each variable for the Dirichlet 
 #' distribution
-#' 
-#' @param matrix_data A matrix of data
+#' @param matrix_data A matrix of data.
 #' @return A list of vectors of the proportion of each level across all of 
 #' matrix_data.
 phi_prior <- function(matrix_data) {
