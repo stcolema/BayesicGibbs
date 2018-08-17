@@ -84,9 +84,23 @@ tree.}
 \item{fontsize_col:}{The fontsize in columns in pheatmap.}
 }
 \value{
-A named list.
+A named list including at least the output from the gibbs sampler,
+but can include two pheatmaps and a scatter plot of the entropy over 
+iterations.
 }
 \description{
 Returns mean, variance and similarity posteriors from Gibbs sampling with
 option of pheatmap
+}
+\examples{
+data("hyperLOPIT2015") # MS object from pRolocData
+mcmc_object <- mcmc_out(hyperLOPIT2015,
+  num_iter = 10000,
+  burn = 1000,
+  thinning = 50,
+  outlier = TRUE,
+  heat_plot = TRUE,
+  main = "Gene clustering by organelle",
+  prediction_threshold = 0.5
+)
 }

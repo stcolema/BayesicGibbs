@@ -391,7 +391,20 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 #' @param record_posteriors A bool instructing the mcmc function to record the 
 #' posterior distributions of the mean and variance for each cluster
 #' (default is FALSE)
-#' @return A named list.
+#' @return A named list including at least the output from the gibbs sampler,
+#' but can include two pheatmaps and a scatter plot of the entropy over 
+#' iterations.
+#' @examples 
+#' data("hyperLOPIT2015") # MS object from pRolocData
+#' mcmc_object <- mcmc_out(hyperLOPIT2015,
+#'   num_iter = 10000,
+#'   burn = 1000,
+#'   thinning = 50,
+#'   outlier = TRUE,
+#'   heat_plot = TRUE,
+#'   main = "Gene clustering by organelle",
+#'   prediction_threshold = 0.5
+#' )
 mcmc_out <- function(MS_object,
                      class_labels_0 = NULL,
                      mu_0 = NULL,
@@ -625,7 +638,7 @@ mcmc_out <- function(MS_object,
       color = col_pal,
       fontsize = fontsize,
       fontsize_row = fontsize_row,
-      fontsize_col = fontsize_col,
+      fontsize_col = fontsize_col
     )
   }
   if (entropy_plot) {
