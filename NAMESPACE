@@ -1,0 +1,3 @@
+useDynLib(BayesicGibbs, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+exportPattern("^[[:alpha:]]+")
