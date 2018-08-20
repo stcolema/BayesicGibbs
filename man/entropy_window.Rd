@@ -8,20 +8,20 @@ entropy_window(entropy_vec, start = 1, window_length = 25,
   mean_tolerance = 0.001, sd_tolerance = 0.001)
 }
 \arguments{
-\item{entropy_vec}{A vector of numbers corresponding to entropy of each 
+\item{entropy_vec}{A vector of numbers corresponding to entropy of each
 iteration.}
 
-\item{start}{An integer instructing which iteration to start with (default is 
+\item{start}{An integer instructing which iteration to start with (default is
 1).}
 
-\item{window_length}{The number of iterations to consider when considering 
+\item{window_length}{The number of iterations to consider when considering
 convergence (default is 25).}
 
-\item{mean_tolerance}{A number. The threshold for how close the mean of the 
+\item{mean_tolerance}{A number. The threshold for how close the mean of the
 two windows must be to be considered converged (default is 0.001).}
 
-\item{sd_tolerance:}{A number. The threshold for how close the standard 
-deviation of the two windows must be to be considered converged (default is 
+\item{sd_tolerance:}{A number. The threshold for how close the standard
+deviation of the two windows must be to be considered converged (default is
 0.001).}
 }
 \value{

@@ -15,7 +15,7 @@ gibbs_sampling(data, k, class_labels, fix_vec, d = NULL, N = NULL,
 
 \item{k}{The number of clusters.}
 
-\item{class_labels}{A vector of unsigned integers representing the initial 
+\item{class_labels}{A vector of unsigned integers representing the initial
 cluster of the corresponding point in data}
 
 \item{num_iter}{The number of iterations to sample over.}
@@ -26,24 +26,24 @@ cluster of the corresponding point in data}
 
 \item{df_0}{The prior on the degrees of freedom. if NULL defaults to d + 2.}
 
-\item{scale_0}{The prior on the scale for the Inverse Wishart. If NULL 
+\item{scale_0}{The prior on the scale for the Inverse Wishart. If NULL
 generated using an empirical method.}
 
 \item{lambda_0}{The prior of shrinkage for mean distribution.}
 
-\item{concentration_0}{The prior for dirichlet distribution of cluster 
+\item{concentration_0}{The prior for dirichlet distribution of cluster
 weights.}
 
 \item{thinning}{The step between iterations for which results are recorded in
 the mcmc output.}
 
-\item{outlier}{A bool instructing the sampler to consider an additional 
+\item{outlier}{A bool instructing the sampler to consider an additional
 outlier cluster following a t-distribution}
 
-\item{t_df}{The degrees of freedom for the outlier t-distribution (default 
+\item{t_df}{The degrees of freedom for the outlier t-distribution (default
 is 4)}
 
-\item{record_posteriors}{A bool instructing the mcmc function to record the 
+\item{record_posteriors}{A bool instructing the mcmc function to record the
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
 }

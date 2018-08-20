@@ -467,7 +467,7 @@ mcmc_out <- function(MS_object,
     class_labels_key <- suppressWarnings(bind_rows(class_labels_key, outlier_row))
   }
 
-  class_labels_0 <- class_label_prior(class_labels_0, nk, train, MS_object, N)
+  class_labels_0 <- cluster_label_prior(class_labels_0, nk, train, MS_object, N)
 
 
   if (is.null(num_iter)) {
@@ -703,11 +703,23 @@ MS_dataset <- function(MS_object, train = NULL) {
 
 
 
-class_label_prior <- function(class_labels_0,
-                              nk,
-                              train,
-                              MS_object,
-                              N) {
+#' @title Cluster label prior
+#' @description Generates a vector of labels if required
+#' @param class_labels_0 An optional prior for clusters in MS_object. If NULL
+#' defaults to a randomly generated set using the proportion in the labelled
+#' data.
+#' @param nk Table of the frequency of the classes in the datset
+#' @param train A NULL, TRUE or FALSE value informing if supervised (TRUE),
+#' semi-supervised (NULL) or unsupervised (FALSE)
+#' @param MS_object The MS object from pRolocData being analysed
+#' @param N The number of observations
+#' @return A vector of integers corresponding to the cluster allocation of the N
+#' observations
+cluster_label_prior <- function(class_labels_0,
+                                nk,
+                                train,
+                                MS_object,
+                                N) {
   # Generate class labels
   if (is.null(class_labels_0)) {
     class_weights <- nk / sum(nk)

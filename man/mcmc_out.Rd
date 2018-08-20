@@ -18,19 +18,19 @@ mcmc_out(MS_object, class_labels_0 = NULL, mu_0 = NULL, df_0 = NULL,
 \item{MS_object}{A dataset in the format used by pRolocdata.}
 
 \item{class_labels_0}{An optional prior for clusters in MS_object. If NULL
-defaults to a randomly generated set using the proportion in the labelled 
+defaults to a randomly generated set using the proportion in the labelled
 data.}
 
 \item{mu_0}{A d-vector; prior on mean. If NULL defaults to mean of data.}
 
 \item{df_0}{The prior on the degrees of freedom. if NULL defaults to d + 2.}
 
-\item{scale_0}{The prior on the scale for the Inverse Wishart. If NULL 
+\item{scale_0}{The prior on the scale for the Inverse Wishart. If NULL
 generated using an empirical method.}
 
 \item{lambda_0}{The prior of shrinkage for mean distribution.}
 
-\item{concentration_0}{The prior for dirichlet distribution of cluster 
+\item{concentration_0}{The prior for dirichlet distribution of cluster
 weights.}
 
 \item{num_iter}{The number of iterations to sample over.}
@@ -40,7 +40,7 @@ weights.}
 \item{thinning}{The step between iterations for which results are recorded in
 the mcmc output.}
 
-\item{heat_plot}{A bool. Instructs saving and printing of heatmap of 
+\item{heat_plot}{A bool. Instructs saving and printing of heatmap of
 similarity matrix from Gibbs sampling. Default is TRUE.}
 
 \item{main}{String. The title for heatmap, default is "heatmap_for_similarity".}
@@ -50,31 +50,31 @@ similarity matrix from Gibbs sampling. Default is TRUE.}
 \item{entropy_plot}{A bool instructing function to save a plot of the entropy
 across all iterations. Default is TRUE.}
 
-\item{window_length}{A number. Input to entropy ploy function. Default is 
+\item{window_length}{A number. Input to entropy ploy function. Default is
 min(25, num_iter / 5).}
 
 \item{mean_tolerance}{Input to entropy ploy function. Default is 0.0005.}
 
 \item{sd_tolerance}{Input to entropy ploy function. Default is 0.0005.}
 
-\item{outlier}{A bool instructing the sampler to consider an additional 
+\item{outlier}{A bool instructing the sampler to consider an additional
 outlier cluster following a t-distribution}
 
-\item{t_df}{The degrees of freedom for the outlier t-distribution (default 
+\item{t_df}{The degrees of freedom for the outlier t-distribution (default
 is 4)}
 
-\item{prediction_threshold}{The minimum proportion of recorded iterations 
+\item{prediction_threshold}{The minimum proportion of recorded iterations
 for which a point is in its most common cluster for which a prediction is
 returned. If below this predicted class is NA.}
 
-\item{record_posteriors}{A bool instructing the mcmc function to record the 
+\item{record_posteriors}{A bool instructing the mcmc function to record the
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
 
 \item{train:}{instruction to include all data (NULL), labelled data (TRUE) or
 unlabelled data (FALSE). Default is NULL.}
 
-\item{cluster_cols:}{A bool. instructs pheatmap to cluster columns using a 
+\item{cluster_cols:}{A bool. instructs pheatmap to cluster columns using a
 tree.}
 
 \item{fontsize:}{The size of font in pheatmap.}
@@ -85,7 +85,7 @@ tree.}
 }
 \value{
 A named list including at least the output from the gibbs sampler,
-but can include two pheatmaps and a scatter plot of the entropy over 
+but can include two pheatmaps and a scatter plot of the entropy over
 iterations.
 }
 \description{

@@ -14,7 +14,7 @@ empirical_bayes_initialise(data, mu_0, df_0, scale_0, N, k, d)
 
 \item{df_0}{An integer. If NULL defaults to d + 2.}
 
-\item{scale_0}{A positive definite matrix. The prior for the scale parameter 
+\item{scale_0}{A positive definite matrix. The prior for the scale parameter
 of the inverse wishart distribution; if NULL defaults to a diagonal matrix.}
 
 \item{N}{The number of entries in data.}

@@ -10,10 +10,10 @@ phi_prior(matrix_data)
 \item{matrix_data}{A matrix of data.}
 }
 \value{
-A list of vectors of the proportion of each level across all of 
+A list of vectors of the proportion of each level across all of
 matrix_data.
 }
 \description{
-Generates a prior for the phi vector for each variable for the Dirichlet 
+Generates a prior for the phi vector for each variable for the Dirichlet
 distribution
 }

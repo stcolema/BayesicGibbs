@@ -8,14 +8,14 @@ annotated_heatmap(input_data, annotation_row = NULL,
   sort_by_col = NULL, train = NULL, ...)
 }
 \arguments{
-\item{input_data}{A matrix of data to be heat mapped. Needs column and 
+\item{input_data}{A matrix of data to be heat mapped. Needs column and
 rownames.}
 
-\item{annotation_row}{A data frame of the annotation variable(s). Names must 
+\item{annotation_row}{A data frame of the annotation variable(s). Names must
 match with input_data. If NULL returns normal pheatmap.}
 
-\item{sort_by_col}{The name of the column to sort input_data and 
-annotation_row by when heatmapping. If pheatmap is instructed to sort_rows 
+\item{sort_by_col}{The name of the column to sort input_data and
+annotation_row by when heatmapping. If pheatmap is instructed to sort_rows
 this has no impact. Default is NULL in which case no sorting occurs.}
 
 \item{train}{If FALSE returns normal pheatmap.}
