@@ -434,41 +434,14 @@ mcmc_out <- function(MS_object,
                      t_df = 4.0,
                      prediction_threshold = 0.6,
                      record_posteriors = FALSE) {
-  # Data with labels
-  mydata_labels <- pRoloc:::subsetAsDataFrame(
-    object = MS_object,
-    fcol = "markers",
-    train = TRUE
-  )
-
-  fixed <- rep(TRUE, nrow(mydata_labels))
-
-  mydata_no_labels <- pRoloc:::subsetAsDataFrame(
-    object = MS_object,
-    fcol = "markers",
-    train = FALSE
-  )
-
-  not_fixed <- rep(FALSE, nrow(mydata_no_labels))
-
-  nk <- tabulate(fData(markerMSnSet(MS_object))[, "markers"])
-
-  mydata_no_labels$markers <- NA
-
-  if (is.null(train)) {
-    row_names <- c(rownames(mydata_labels), rownames(mydata_no_labels))
-    mydata <- suppressWarnings(bind_rows(mydata_labels, mydata_no_labels))
-    fix_vec <- c(fixed, not_fixed)
-  } else if (isTRUE(train)) {
-    row_names <- c(rownames(mydata_labels))
-    mydata <- mydata_labels
-    fix_vec <- fixed
-  } else {
-    row_names <- c(rownames(mydata_no_labels))
-    mydata <- mydata_no_labels
-    fix_vec <- not_fixed
-  }
-
+  # MS data
+  MS_data <- MS_dataset(MS_object, train = train)
+  
+  mydata <- MS_data$data
+  nk <- MS_data$nk
+  row_names <- MS_data$row_names
+  fix_vec <- MS_data$fix_vec
+  
   class_labels <- data.frame(Class = mydata$markers)
 
   classes_present <- unique(fData(markerMSnSet(MS_object))[, "markers"])
@@ -694,6 +667,55 @@ mcmc_out <- function(MS_object,
   }
 
   return(list(gibbs = gibbs, data = all_data))
+}
+
+#' @title MS dataset
+#' @description Given an MS object from pRolocData, returns the numerical data,
+#' the count of each class and the vector recording which labels are fixed (i.e
+#' from the training set) and unfixed.
+#'
+#' @param MS_object A dataset in the format used by pRolocdata.
+#' @param train: instruction to include all data (NULL), labelled data (TRUE) or
+#' unlabelled data (FALSE). Default is NULL.
+#' @examples 
+#' data("hyperLOPIT2015") # MS object from pRolocData
+#' MS_data <- MS_dataset(hyperLOPIT2015)
+MS_dataset <- function(MS_object, train = NULL){
+  # Data with labels
+  mydata_labels <- pRoloc:::subsetAsDataFrame(
+    object = MS_object,
+    fcol = "markers",
+    train = TRUE
+  )
+  
+  fixed <- rep(TRUE, nrow(mydata_labels))
+  
+  mydata_no_labels <- pRoloc:::subsetAsDataFrame(
+    object = MS_object,
+    fcol = "markers",
+    train = FALSE
+  )
+  
+  not_fixed <- rep(FALSE, nrow(mydata_no_labels))
+  
+  nk <- tabulate(fData(markerMSnSet(MS_object))[, "markers"])
+  
+  mydata_no_labels$markers <- NA
+  
+  if (is.null(train)) {
+    row_names <- c(rownames(mydata_labels), rownames(mydata_no_labels))
+    mydata <- suppressWarnings(bind_rows(mydata_labels, mydata_no_labels))
+    fix_vec <- c(fixed, not_fixed)
+  } else if (isTRUE(train)) {
+    row_names <- c(rownames(mydata_labels))
+    mydata <- mydata_labels
+    fix_vec <- fixed
+  } else {
+    row_names <- c(rownames(mydata_no_labels))
+    mydata <- mydata_no_labels
+    fix_vec <- not_fixed
+  }
+  return(list(data = mydata, fix_vec = fix_vec, row_names = row_names, nk = nk))
 }
 
 # === Olly =====================================================================
