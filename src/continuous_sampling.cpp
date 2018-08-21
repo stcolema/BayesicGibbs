@@ -273,17 +273,17 @@ arma::mat variance_posterior(int df_0,
   
 } 
 
-arma::vec sample_class(arma::vec point,
-                       arma::mat data,
-                       arma::uword k,
-                       arma::vec class_weights,
-                       arma::uvec class_labels,
-                       arma::cube mu,
-                       arma::cube variance,
-                       bool outlier = false,
-                       arma::vec global_mean = arma::zeros<arma::vec>(1),
-                       arma::mat global_variance = arma::zeros<arma::mat>(1, 1),
-                       double t_df = 4.0){
+arma::vec sample_gaussian_cluster(arma::vec point,
+                                  arma::mat data,
+                                  arma::uword k,
+                                  arma::vec class_weights,
+                                  arma::uvec class_labels,
+                                  arma::cube mu,
+                                  arma::cube variance,
+                                  bool outlier = false,
+                                  arma::vec global_mean = arma::zeros<arma::vec>(1),
+                                  arma::mat global_variance = arma::zeros<arma::mat>(1, 1),
+                                  double t_df = 4.0){
 
   double curr_weight;
   double exponent;
@@ -331,7 +331,7 @@ arma::vec sample_class(arma::vec point,
 
 // Predicts the cluster for a point given the vector of probabilities associated
 // with each one
-arma::uword select_class(arma::vec prob_vec){
+arma::uword cluster_predictor(arma::vec prob_vec){
   
   // std::cout << prob_vec << "\n\n";
   double u;
@@ -422,7 +422,7 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
 //     // if the current point is not fixed, sample its class
 //     point = arma::trans(data.row(jj));
 //     
-//     curr_cluster_probs = sample_class(point, 
+//     curr_cluster_probs = sample_gaussian_cluster(point, 
 //                                     data,
 //                                     k, 
 //                                     class_weights, 
@@ -443,7 +443,7 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
 //       
 //     }
 //     if(! fix_vec[jj]){
-//       cluster_labels(jj) = select_class(curr_cluster_probs);
+//       cluster_labels(jj) = cluster_predictor(curr_cluster_probs);
 //       // std::cout << "New label\n" << class_labels(jj) << "\n";
 //     }
 //   }
@@ -550,7 +550,7 @@ Rcpp::List point_comparison(arma::uword num_iter,
        // if the current point is not fixed, sample its class
         point = arma::trans(data.row(jj));
         
-        curr_class_probs = sample_class(point, 
+        curr_class_probs = sample_gaussian_cluster(point, 
                                         data,
                                         k, 
                                         class_weights, 
@@ -572,7 +572,7 @@ Rcpp::List point_comparison(arma::uword num_iter,
           
         }
         if(! fix_vec[jj]){
-        class_labels(jj) = select_class(curr_class_probs);
+        class_labels(jj) = cluster_predictor(curr_class_probs);
         // std::cout << "New label\n" << class_labels(jj) << "\n";
       }
     }
