@@ -828,13 +828,13 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
   // being in the same cluster in a different context and weighted by the cluster
   // weight in the current context
   double curr_weight = 0.0;
-  double upweight = 0.0;
+  double context_upweight = 0.0;
   for(arma::uword i = 0; i < num_clusters_categorical; i++){
     
     // calculate the log-weights for the context specific cluster and the across
     // context similarity
     curr_weight = log(cluster_weights_categorical(i));
-    upweight = log(1 + context_similarity
+    context_upweight = log(1 + context_similarity
       * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
     );
     
@@ -842,36 +842,107 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
       
       probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
     }
-    probabilities(i) = curr_weight + probabilities(i) + upweight;
+    
+    // As logs can sum rather than multiply the components
+    probabilities(i) = curr_weight + probabilities(i) + context_upweight;
   }
+  
+  // to handle overflowing
   probabilities = exp(probabilities - max(probabilities));
+  
+  // normalise
   probabilities = probabilities / sum(probabilities);
   
   return probabilities;
 }
 
-void mdi(arma::mat gaussian_data,
-         arma::umat categorical_data,
-         arma::vec mu_0,
-         double lambda_0,
-         arma::mat scale_0,
-         int df_0,
-         arma::vec cluster_weight_priors_gaussian,
-         arma::vec cluster_weight_priors_categorical,
-         arma::field<arma::vec> phi_prior,
-         arma::uvec cluster_labels_gaussian,
-         arma::uvec cluster_labels_categorical,
-         arma::uword num_clusters_gaussian,
-         arma::uword num_clusters_categorical,
-         // double context_similarity, // or declared at 0.0 within code?
-         std::vector<bool> fix_vec,
-         arma::uword num_iter,
-         arma::uword burn,
-         arma::uword thinning,
-         bool outlier = false,
-         double t_df = 4.0,
-         bool record_posteriors = false
-         ){
+
+arma::vec mdi_gaussian_cluster_probabilities(arma::uword row_index,
+                                             arma::mat data,
+                                             arma::uword k,
+                                             arma::cube mu,
+                                             arma::cube variance,
+                                             double context_similarity,
+                                             arma::vec cluster_weights_gaussian,
+                                             arma::uvec cluster_labels_gaussian,
+                                             arma::uvec cluster_labels_categorical,
+                                             bool outlier = false,
+                                             arma::vec global_mean = arma::zeros<arma::vec>(1),
+                                             arma::mat global_variance = arma::zeros<arma::mat>(1, 1),
+                                             double t_df = 4.0){
+  
+  double curr_weight;
+  double context_upweight;
+  double exponent;
+  double log_likelihood;
+  
+  double log_det;
+  arma::vec prob_vec(k);
+  
+  arma::uvec count_probs;
+  
+  arma::uword d = data.n_cols;;
+  
+  arma::vec point = arma::trans(data.row(row_index));
+  
+  for(arma::uword i = 1; i < k + 1; i++){
+    curr_weight = log(cluster_weights_gaussian(i - 1));
+    
+    context_upweight = log(1 + context_similarity
+                             * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
+    );
+    
+    if(outlier && i == k){
+      
+      exponent = arma::as_scalar(arma::trans(point - global_mean) 
+                                   * arma::inv(global_variance)
+                                   * (point - global_mean));
+                                   
+                                   log_det = arma::log_det(global_variance).real();
+                                   
+                                   log_likelihood = (lgamma((t_df + d)/2.0) - lgamma(t_df/2.0)
+                                                       + d/2.0 * log(t_df * M_PI) + log_det - ((t_df + d)/2.0) *
+                                                         log(1 + (1/t_df) * exponent));
+                                   
+    }
+    else {
+      exponent = arma::as_scalar(arma::trans(point - mu.slice(i - 1)) 
+                                   * arma::inv(variance.slice(i - 1))
+                                   * (point - mu.slice(i - 1)));
+                                   
+                                   log_det = arma::log_det(variance.slice(i - 1)).real();
+                                   log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
+    }
+    prob_vec(i - 1) = curr_weight + log_likelihood + context_upweight;
+  } 
+  prob_vec = exp(prob_vec - max(prob_vec));
+  prob_vec = prob_vec / sum(prob_vec);
+  
+  return prob_vec;
+}
+
+arma::mat mdi(arma::mat gaussian_data,
+              arma::umat categorical_data,
+              arma::vec mu_0,
+              double lambda_0,
+              arma::mat scale_0,
+              int df_0,
+              arma::vec cluster_weight_priors_gaussian,
+              arma::vec cluster_weight_priors_categorical,
+              arma::field<arma::vec> phi_prior,
+              arma::uvec cluster_labels_gaussian,
+              arma::uvec cluster_labels_categorical,
+              arma::uword num_clusters_gaussian,
+              arma::uword num_clusters_categorical,
+              // double context_similarity, // or declared at 0.0 within code?
+              std::vector<bool> fix_vec,
+              arma::uword num_iter,
+              arma::uword burn,
+              arma::uword thinning,
+              bool outlier = false,
+              double t_df = 4.0,
+              bool record_posteriors = false
+              ){
   
   // Declare the sample size and dimensionality of the continuous and 
   // categorical data
@@ -890,6 +961,16 @@ void mdi(arma::mat gaussian_data,
   
   //  Normalise the continuous data
   gaussian_data = normalise_data(gaussian_data, num_cols_cont);
+  
+  
+  // Declare global variance and mean - used in outlier t-distribution 
+  // (if included)
+  arma::mat global_variance(num_cols_cont, num_cols_cont);
+  global_variance = 0.5 * arma::cov(gaussian_data); // Olly's rec
+  
+  arma::vec global_mean(num_cols_cont);
+  global_mean = arma::trans(arma::mean(gaussian_data, 0));
+  
   
   double v = 0.0; // strategic latent variable
   
@@ -915,6 +996,18 @@ void mdi(arma::mat gaussian_data,
                                             cluster_weights_categorical,
                                             context_similarity,
                                             min_num_clusters);
+  
+  arma::vec curr_gaussian_prob_vec(num_clusters_gaussian);
+  arma::vec curr_categorical_prob_vec(num_clusters_categorical);
+  
+  // the record for similarity in each clustering
+  arma::uword eff_count = ceil((double)(num_iter - burn) / (double)thinning);
+  
+  arma::umat gaussian_record(n, eff_count);
+  gaussian_record.zeros();
+  
+  arma::umat categorical_record(n, eff_count);
+  categorical_record.zeros();
   
   for(arma::uword i = 0; i < num_iter; i++){
     // sample the strategic latent variable, v
@@ -965,13 +1058,51 @@ void mdi(arma::mat gaussian_data,
                                        cluster_weights_categorical,
                                        context_similarity,
                                        min_num_clusters);
+
+    // sample 
+    for(arma::uword j = 0; j < n; j++){
+      curr_gaussian_prob_vec = mdi_gaussian_cluster_probabilities(j,
+                                                             gaussian_data,
+                                                             num_clusters_gaussian,
+                                                             loc_mu_variance(1),
+                                                             loc_mu_variance(0),
+                                                             context_similarity,
+                                                             cluster_weights_gaussian,
+                                                             cluster_labels_gaussian,
+                                                             cluster_labels_categorical,
+                                                             outlier,
+                                                             global_mean,
+                                                             global_variance,
+                                                             t_df);
+      
+      curr_categorical_prob_vec = mdi_categorical_cluster_probabilities(j,
+                                                                   categorical_data,
+                                                                   class_probabilities,
+                                                                   num_clusters_categorical,
+                                                                   num_cols_cat,
+                                                                   context_similarity,
+                                                                   cluster_weights_categorical,
+                                                                   cluster_labels_gaussian,
+                                                                   cluster_labels_categorical);
+      
+      
+      // update labels - in gaussian data this is only if the current point is 
+      // not fixed
+      if(! fix_vec[j]){
+        cluster_labels_gaussian(j) = cluster_predictor(curr_gaussian_prob_vec);
+      }
+      cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
+    }
     
-    
-    
-    
-    
+    // if current iteration is a recorded iteration, save the labels
+    if (i >= burn && (i - burn) % thinning == 0) {
+      gaussian_record.col((i - burn) / thinning) = cluster_labels_gaussian;
+      categorical_record.col((i - burn) / thinning) = cluster_labels_categorical;
+    }
   }
   
-  
-  
+  // construct similarity matrix
+  arma::mat sim(n, n);
+  sim = similarity_mat(gaussian_record);
+  return sim;   
 }
