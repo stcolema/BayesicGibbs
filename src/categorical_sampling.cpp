@@ -397,20 +397,23 @@ arma::field<arma::mat> sample_class_probabilities(arma::field<arma::mat> class_p
 arma::vec categorical_cluster_probabilities(arma::urowvec point,
                                             arma::umat data,
                                             arma::field<arma::mat> class_probabilities,
+                                            arma::vec cluster_weights,
                                             arma::uword num_clusters,
                                             arma::uword num_cols){
   
   // std::cout << "In function cluster_probabilities\n";
   arma::vec probabilities = arma::zeros<arma::vec>(num_clusters);
 
-  // std::cout << "\n\n" << class_probabilities << "\n\n";
+  double curr_weight = 0.0;
   
+  // std::cout << "\n\n" << class_probabilities << "\n\n";
   for(arma::uword i = 0; i < num_clusters; i++){
+    curr_weight = log(cluster_weights(i));
     for(arma::uword j = 0; j < num_cols; j++){
 
       probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
     }
-    
+    probabilities(i) = probabilities(i) + curr_weight;
   }
   probabilities = exp(probabilities - max(probabilities));
   probabilities = probabilities / sum(probabilities);
@@ -489,6 +492,7 @@ arma::mat categorical_clustering(arma::umat data,
       curr_cluster_probs = categorical_cluster_probabilities(data.row(j),
                                                data,
                                                class_probabilities,
+                                               cluster_weights,
                                                num_clusters,
                                                num_cols);
       
@@ -820,15 +824,25 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
   
   // std::cout << "\n\n" << class_probabilities << "\n\n";
   
+  // pretty much this is the product of probabilities possibly up-weighted by
+  // being in the same cluster in a different context and weighted by the cluster
+  // weight in the current context
+  double curr_weight = 0.0;
+  double upweight = 0.0;
   for(arma::uword i = 0; i < num_clusters_categorical; i++){
+    
+    // calculate the log-weights for the context specific cluster and the across
+    // context similarity
+    curr_weight = log(cluster_weights_categorical(i));
+    upweight = log(1 + context_similarity
+      * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
+    );
+    
     for(arma::uword j = 0; j < num_cols_cat; j++){
       
       probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
     }
-    probabilities(i) = cluster_weights_categorical(i) * probabilities(i) 
-      * (1 + context_similarity 
-           * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
-      );
+    probabilities(i) = curr_weight + probabilities(i) + upweight;
   }
   probabilities = exp(probabilities - max(probabilities));
   probabilities = probabilities / sum(probabilities);
