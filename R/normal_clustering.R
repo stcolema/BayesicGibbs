@@ -185,7 +185,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
     concentration_0 <- rep(concentration_0, k + outlier)
   }
 
-  sim <- point_comparison(
+  sim <- gaussian_clustering(
     num_iter,
     concentration_0,
     scale_0,

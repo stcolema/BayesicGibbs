@@ -272,7 +272,20 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
   return mean_variance_field;
 }
 
-
+// Normalise continuous data
+arma::mat normalise_data(arma::mat data,
+                         arma::uword num_cols,
+                         bool gaussian = true){
+  arma::vec median_vec(num_cols);
+  arma::vec sd_vec(num_cols);
+  
+  if(gaussian){
+    median_vec = arma::median(data, 0);
+    sd_vec = arma::stddev(data, 0);
+    data = (data - median_vec) / sd_vec;
+  }
+  return data;
+}
 // === Dirichlet ===============================================================
 
 // update the concentration parameter in the Dirichlet distribution
@@ -556,21 +569,21 @@ arma::vec sample_gaussian_cluster(arma::vec point,
 
 // The actual clustering/sampling
 // [[Rcpp::export]]
-Rcpp::List point_comparison(arma::uword num_iter,
-                            arma::vec concentration_0,
-                            arma::mat scale_0,
-                            arma::uvec class_labels,
-                            std::vector<bool> fix_vec,
-                            arma::vec mu_0,
-                            double lambda_0,
-                            arma::mat data,
-                            int df_0,
-                            arma::uword k,
-                            arma::uword burn,
-                            arma::uword thinning,
-                            bool outlier = false,
-                            double t_df = 4.0,
-                            bool record_posteriors = false){
+Rcpp::List gaussian_clustering(arma::uword num_iter,
+                               arma::vec concentration_0,
+                               arma::mat scale_0,
+                               arma::uvec class_labels,
+                               std::vector<bool> fix_vec,
+                               arma::vec mu_0,
+                               double lambda_0,
+                               arma::mat data,
+                               int df_0,
+                               arma::uword k,
+                               arma::uword burn,
+                               arma::uword thinning,
+                               bool outlier = false,
+                               double t_df = 4.0,
+                               bool record_posteriors = false){
   
   // std::cout << "In function";
   arma::uword N;
@@ -722,4 +735,8 @@ Rcpp::List point_comparison(arma::uword num_iter,
                       Named("entropy") = entropy_cw,
                       Named("class_prob") = class_probs);
 }
+
+
+// === MDI Code ================================================================
+
 
