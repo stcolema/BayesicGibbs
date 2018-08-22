@@ -802,6 +802,40 @@ double calculate_normalising_constant(arma::vec cluster_weights_gaussian,
   return Z;
 }
 
+// Sample the cluster membership of a categorical sample for MDI
+arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
+                                                arma::umat categorical_data,
+                                                arma::field<arma::mat> class_probabilities,
+                                                arma::uword num_clusters_categorical,
+                                                arma::uword num_cols_cat,
+                                                double context_similarity,
+                                                arma::vec cluster_weights_categorical,
+                                                arma::uvec cluster_labels_gaussian,
+                                                arma::uvec cluster_labels_categorical){
+  
+  // std::cout << "In function cluster_probabilities\n";
+  arma::vec probabilities = arma::zeros<arma::vec>(num_clusters_categorical);
+  
+  arma::urowvec point = categorical_data.row(row_index);
+  
+  // std::cout << "\n\n" << class_probabilities << "\n\n";
+  
+  for(arma::uword i = 0; i < num_clusters_categorical; i++){
+    for(arma::uword j = 0; j < num_cols_cat; j++){
+      
+      probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
+    }
+    probabilities(i) = cluster_weights_categorical(i) * probabilities(i) 
+      * (1 + context_similarity 
+           * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
+      );
+  }
+  probabilities = exp(probabilities - max(probabilities));
+  probabilities = probabilities / sum(probabilities);
+  
+  return probabilities;
+}
+
 void mdi(arma::mat gaussian_data,
          arma::umat categorical_data,
          arma::vec mu_0,
@@ -815,7 +849,7 @@ void mdi(arma::mat gaussian_data,
          arma::uvec cluster_labels_categorical,
          arma::uword num_clusters_gaussian,
          arma::uword num_clusters_categorical,
-         // double context_similarity, // or declared at 0?
+         // double context_similarity, // or declared at 0.0 within code?
          std::vector<bool> fix_vec,
          arma::uword num_iter,
          arma::uword burn,
