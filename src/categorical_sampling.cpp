@@ -856,7 +856,8 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
   return probabilities;
 }
 
-
+// sample calculate probabilties for cluster allocation in the gaussian data in 
+// MDI (hence the presence of the context similarity parameter)
 arma::vec mdi_gaussian_cluster_probabilities(arma::uword row_index,
                                              arma::mat data,
                                              arma::uword k,
@@ -1061,6 +1062,9 @@ arma::mat mdi(arma::mat gaussian_data,
 
     // sample 
     for(arma::uword j = 0; j < n; j++){
+      
+      // for each point create the vector of probabilities associated with 
+      // assignment to each cluster
       curr_gaussian_prob_vec = mdi_gaussian_cluster_probabilities(j,
                                                              gaussian_data,
                                                              num_clusters_gaussian,
@@ -1106,3 +1110,18 @@ arma::mat mdi(arma::mat gaussian_data,
   sim = similarity_mat(gaussian_record);
   return sim;   
 }
+
+
+//  Have to create a function for label swapping
+// This will involve comparing likelihoods with and without swap and then 
+// a rejection method
+
+// will have to re-order cluster weights vector for dataset 2; easiest to record
+// which classes flip and hence the index of the gammas which have to swap
+// to generate a vector of the indices use: 
+// std::vector<int> v(100) ; // vector with 100 ints.
+// std::iota (std::begin(v), std::end(v), 0);
+// 
+// Will compare improvement in context similarity if cat_cluster_label(j) changed
+// to associating with cont_cluster_label(i) and then record swapping of (j) and 
+// (i) in the cluster labels in context 2 and the change in the gamma vector
