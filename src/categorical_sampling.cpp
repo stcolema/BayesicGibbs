@@ -1190,23 +1190,6 @@ arma::mat mdi(arma::mat gaussian_data,
                                        min_num_clusters);
     
     
-    // Update cluster labels in second dataset
-    // Return the new labels, weights and similarity in a single vector
-    labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
-                                              cluster_labels_categorical,
-                                              cluster_weights_gaussian,
-                                              cluster_weights_categorical,
-                                              num_clusters_categorical,
-                                              context_similarity,
-                                              min_num_clusters,
-                                              v,
-                                              n);
-    
-    // Separate the output into the relevant components
-    cluster_labels_categorical = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
-    cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
-    context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
-    
     // sample 
     for(arma::uword j = 0; j < n; j++){
       
@@ -1243,7 +1226,25 @@ arma::mat mdi(arma::mat gaussian_data,
         cluster_labels_gaussian(j) = cluster_predictor(curr_gaussian_prob_vec);
       }
       cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
+      
     }
+    
+    // Update cluster labels in second dataset
+    // Return the new labels, weights and similarity in a single vector
+    labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
+                                              cluster_labels_categorical,
+                                              cluster_weights_gaussian,
+                                              cluster_weights_categorical,
+                                              num_clusters_categorical,
+                                              context_similarity,
+                                              min_num_clusters,
+                                              v,
+                                              n);
+    
+    // Separate the output into the relevant components
+    cluster_labels_categorical = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
+    cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
+    context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
     
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
