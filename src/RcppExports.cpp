@@ -126,42 +126,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// entropy
-double entropy(arma::vec class_weights);
-RcppExport SEXP _BayesicGibbs_entropy(SEXP class_weightsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type class_weights(class_weightsSEXP);
-    rcpp_result_gen = Rcpp::wrap(entropy(class_weights));
-    return rcpp_result_gen;
-END_RCPP
-}
-// point_comparison
-Rcpp::List point_comparison(arma::uword num_iter, arma::vec concentration_0, arma::mat scale_0, arma::uvec class_labels, std::vector<bool> fix_vec, arma::vec mu_0, double lambda_0, arma::mat data, int df_0, arma::uword k, arma::uword burn, arma::uword thinning, bool outlier, double t_df, bool record_posteriors);
-RcppExport SEXP _BayesicGibbs_point_comparison(SEXP num_iterSEXP, SEXP concentration_0SEXP, SEXP scale_0SEXP, SEXP class_labelsSEXP, SEXP fix_vecSEXP, SEXP mu_0SEXP, SEXP lambda_0SEXP, SEXP dataSEXP, SEXP df_0SEXP, SEXP kSEXP, SEXP burnSEXP, SEXP thinningSEXP, SEXP outlierSEXP, SEXP t_dfSEXP, SEXP record_posteriorsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uword >::type num_iter(num_iterSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type concentration_0(concentration_0SEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type scale_0(scale_0SEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type class_labels(class_labelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<bool> >::type fix_vec(fix_vecSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type mu_0(mu_0SEXP);
-    Rcpp::traits::input_parameter< double >::type lambda_0(lambda_0SEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type df_0(df_0SEXP);
-    Rcpp::traits::input_parameter< arma::uword >::type k(kSEXP);
-    Rcpp::traits::input_parameter< arma::uword >::type burn(burnSEXP);
-    Rcpp::traits::input_parameter< arma::uword >::type thinning(thinningSEXP);
-    Rcpp::traits::input_parameter< bool >::type outlier(outlierSEXP);
-    Rcpp::traits::input_parameter< double >::type t_df(t_dfSEXP);
-    Rcpp::traits::input_parameter< bool >::type record_posteriors(record_posteriorsSEXP);
-    rcpp_result_gen = Rcpp::wrap(point_comparison(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors));
-    return rcpp_result_gen;
-END_RCPP
-}
 // rcpparma_hello_world
 arma::mat rcpparma_hello_world();
 RcppExport SEXP _BayesicGibbs_rcpparma_hello_world() {
@@ -214,8 +178,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_BayesicGibbs_categorical_clustering", (DL_FUNC) &_BayesicGibbs_categorical_clustering, 9},
     {"_BayesicGibbs_gaussian_clustering", (DL_FUNC) &_BayesicGibbs_gaussian_clustering, 15},
     {"_BayesicGibbs_mdi", (DL_FUNC) &_BayesicGibbs_mdi, 20},
-    {"_BayesicGibbs_entropy", (DL_FUNC) &_BayesicGibbs_entropy, 1},
-    {"_BayesicGibbs_point_comparison", (DL_FUNC) &_BayesicGibbs_point_comparison, 15},
     {"_BayesicGibbs_rcpparma_hello_world", (DL_FUNC) &_BayesicGibbs_rcpparma_hello_world, 0},
     {"_BayesicGibbs_rcpparma_outerproduct", (DL_FUNC) &_BayesicGibbs_rcpparma_outerproduct, 1},
     {"_BayesicGibbs_rcpparma_innerproduct", (DL_FUNC) &_BayesicGibbs_rcpparma_innerproduct, 1},
