@@ -922,6 +922,134 @@ arma::vec mdi_gaussian_cluster_probabilities(arma::uword row_index,
   return prob_vec;
 }
 
+
+// In a vector changes all values of ``label_1'' to ``label_2'' and vice versa
+arma::uvec swap_labels(arma::uvec cluster_labels, 
+                       arma::uword label_1, 
+                       arma::uword label_2){
+  
+  arma::uvec label_1_ind = find(cluster_labels == label_1);
+  arma::uvec label_2_ind = find(cluster_labels == label_2);
+  
+  cluster_labels.elem(label_1_ind).fill(label_2);
+  cluster_labels.elem(label_2_ind).fill(label_1);
+  return cluster_labels;
+}
+
+// Swap cluster weights
+arma::vec swap_cluster_weights(arma::vec cluster_weights,
+                               arma::uword label_1, 
+                               arma::uword label_2){
+  
+  arma::vec decoy_weights = cluster_weights;
+  
+  cluster_weights(label_1) = decoy_weights(label_2);
+  cluster_weights(label_2) = decoy_weights(label_1);
+  
+  return cluster_weights;
+}
+
+//  Have to create a function for label swapping
+// This will involve comparing likelihoods with and without swap and then 
+// a rejection method
+
+// will have to re-order cluster weights vector for dataset 2; easiest to record
+// which classes flip and hence the index of the gammas which have to swap
+// to generate a vector of the indices use: 
+// std::vector<int> v(100) ; // vector with 100 ints.
+// std::iota (std::begin(v), std::end(v), 0);
+// 
+// Will compare improvement in context similarity if cat_cluster_label(j) changed
+// to associating with cont_cluster_label(i) and then record swapping of (j) and 
+// (i) in the cluster labels in context 2 and the change in the gamma vector
+
+arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
+                               arma::uvec cluster_labels_categorical,
+                               arma::vec cluster_weights_gaussian,
+                               arma::vec cluster_weights_categorical,
+                               arma::uword num_clusters_categorical,
+                               double context_similarity,
+                               arma::uword min_num_clusters,
+                               double v,
+                               arma::uword n){
+  
+  arma::uword new_pos = 0;
+  
+  double new_context_similarity = 0.0;
+  
+  arma::uvec new_labels(n);
+  arma::vec new_weights;
+  
+  double log_old_similarity = 0.0; 
+  double log_new_similarity = 0.0;
+  
+  double log_accept = 0.0;
+  double accept = 0.0;
+  
+  for(arma::uword i = 0; i < min_num_clusters; i++){
+    
+    // Generate a new position not equal to i
+    // multiply a random number from [0,1] by the upper bound of i less 1
+    // this less 1 is used so that if we equal i we can add 1 and treat all
+    // cases similarly (otherwise we would be biasing the result towards i + 1)
+    new_pos = ceil(arma::randu<double>( ) * (min_num_clusters - 1));
+    
+    if(new_pos >= i){
+      new_pos++;
+    }
+    
+    // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
+    // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
+    // 
+    // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
+    // cluster_labels_categorical.elem(label_2_ind).fill(i);
+    
+    new_labels = swap_labels(cluster_labels_categorical, i, new_pos);
+    new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
+    
+    new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
+                                                        new_labels,
+                                                        cluster_weights_gaussian,
+                                                        new_weights,
+                                                        v,
+                                                        n,
+                                                        min_num_clusters);
+    
+    
+    // Compare new and old context similarities if swap occurs
+    log_old_similarity = std::log(context_similarity + 1);
+    log_new_similarity = std::log(new_context_similarity + 1);
+    
+    log_accept = log_new_similarity - log_old_similarity;
+    
+    // rejection sampling
+    accept = 1;
+    
+    if(log_accept < 0){
+      accept = exp(log_accept);
+    }
+    
+    // if swap accepted update labels, weights and similarity parameter
+    if(arma::randu<double>( ) < accept){
+      
+      cluster_labels_categorical = new_labels;
+      cluster_weights_categorical = new_weights;
+      context_similarity = new_context_similarity;
+      
+    }
+  }
+  // std::vector<double> doubleVec(cluster_labels_categorical.begin(),
+  //                               cluster_labels_categorical.end());
+  // arma::vec X(doubleVec);
+
+  arma::vec output = arma::zeros<arma::vec>(n + num_clusters_categorical + 1);
+  output.subvec(0, n - 1) = arma::conv_to<arma::vec>::from(cluster_labels_categorical); //X;
+  output.subvec(n, n + num_clusters_categorical - 1) = cluster_weights_categorical;
+  output.subvec(n, n + num_clusters_categorical) = context_similarity;
+  return output;
+}
+
+// [[Rcpp::export]]
 arma::mat mdi(arma::mat gaussian_data,
               arma::umat categorical_data,
               arma::vec mu_0,
@@ -935,7 +1063,6 @@ arma::mat mdi(arma::mat gaussian_data,
               arma::uvec cluster_labels_categorical,
               arma::uword num_clusters_gaussian,
               arma::uword num_clusters_categorical,
-              // double context_similarity, // or declared at 0.0 within code?
               std::vector<bool> fix_vec,
               arma::uword num_iter,
               arma::uword burn,
@@ -1010,6 +1137,8 @@ arma::mat mdi(arma::mat gaussian_data,
   arma::umat categorical_record(n, eff_count);
   categorical_record.zeros();
   
+  arma::vec labels_weights_phi(n + num_clusters_categorical + 1);
+  
   for(arma::uword i = 0; i < num_iter; i++){
     // sample the strategic latent variable, v
     v = Rf_rgamma(n, Z);
@@ -1059,7 +1188,25 @@ arma::mat mdi(arma::mat gaussian_data,
                                        cluster_weights_categorical,
                                        context_similarity,
                                        min_num_clusters);
-
+    
+    
+    // Update cluster labels in second dataset
+    // Return the new labels, weights and similarity in a single vector
+    labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
+                                              cluster_labels_categorical,
+                                              cluster_weights_gaussian,
+                                              cluster_weights_categorical,
+                                              num_clusters_categorical,
+                                              context_similarity,
+                                              min_num_clusters,
+                                              v,
+                                              n);
+    
+    // Separate the output into the relevant components
+    cluster_labels_categorical = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
+    cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
+    context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
+    
     // sample 
     for(arma::uword j = 0; j < n; j++){
       
@@ -1108,124 +1255,5 @@ arma::mat mdi(arma::mat gaussian_data,
   // construct similarity matrix
   arma::mat sim(n, n);
   sim = similarity_mat(gaussian_record);
-  return sim;   
-}
-
-
-// In a vector changes all values of ``label_1'' to ``label_2'' and vice versa
-arma::uvec swap_labels(arma::uvec cluster_labels, 
-                       arma::uword label_1, 
-                       arma::uword label_2){
-  
-  arma::uvec label_1_ind = find(cluster_labels == label_1);
-  arma::uvec label_2_ind = find(cluster_labels == label_2);
-  
-  cluster_labels.elem(label_1_ind).fill(label_2);
-  cluster_labels.elem(label_2_ind).fill(label_1);
-  return cluster_labels;
-}
-
-// Swap cluster weights
-arma::vec swap_cluster_weights(arma::vec cluster_weights,
-                               arma::uword label_1, 
-                               arma::uword label_2){
-  
-  arma::vec decoy_weights = cluster_weights;
-  
-  cluster_weights(label_1) = decoy_weights(label_2);
-  cluster_weights(label_2) = decoy_weights(label_1);
-  
-  return cluster_weights;
-}
-
-//  Have to create a function for label swapping
-// This will involve comparing likelihoods with and without swap and then 
-// a rejection method
-
-// will have to re-order cluster weights vector for dataset 2; easiest to record
-// which classes flip and hence the index of the gammas which have to swap
-// to generate a vector of the indices use: 
-// std::vector<int> v(100) ; // vector with 100 ints.
-// std::iota (std::begin(v), std::end(v), 0);
-// 
-// Will compare improvement in context similarity if cat_cluster_label(j) changed
-// to associating with cont_cluster_label(i) and then record swapping of (j) and 
-// (i) in the cluster labels in context 2 and the change in the gamma vector
-
-void cluster_label_update(arma::uvec cluster_labels_gaussian,
-                          arma::uvec cluster_labels_categorical,
-                          arma::vec cluster_weights_gaussian,
-                          arma::vec cluster_weights_categorical,
-                          arma::uword num_clusters_gaussian,
-                          arma::uword num_clusters_categorical,
-                          double context_similarity,
-                          arma::uword min_num_clusters,
-                          double v,
-                          arma::uword n){
-
-  arma::uword new_pos = 0;
-  
-  double new_context_similarity = 0.0;
-  
-  arma::uvec new_labels(n);
-  arma::vec new_weights;
-  
-  double log_old_similarity = 0.0; 
-  double log_new_similarity = 0.0;
-  
-  double log_accept = 0.0;
-  double accept = 0.0;
-  
-  for(arma::uword i = 0; i < min_num_clusters; i++){
-    
-    // Generate a new position not equal to i
-    // multiply a random number from [0,1] by the upper bound of i less 1
-    // this less 1 is used so that if we equal i we can add 1 and treat all
-    // cases similarly (otherwise we would be biasing the result towards i + 1)
-    new_pos = ceil(arma::randu<double>( ) * (min_num_clusters - 1));
-    
-    if(new_pos >= i){
-      new_pos++;
-    }
-    
-    // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
-    // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
-    // 
-    // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
-    // cluster_labels_categorical.elem(label_2_ind).fill(i);
-    
-    new_labels = swap_labels(cluster_labels_categorical, i, new_pos);
-    new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
-                                       
-    new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
-                                                        new_labels,
-                                                        cluster_weights_gaussian,
-                                                        new_weights,
-                                                        v,
-                                                        n,
-                                                        min_num_clusters);
-  }
-  
-  // Compare new and old context similarities if swap occurs
-  log_old_similarity = std::log(context_similarity + 1);
-  log_new_similarity = std::log(new_context_similarity + 1);
-  
-  log_accept = log_new_similarity - log_old_similarity;
-  
-  // rejection sampling
-  accept = 1;
-  
-  if(log_accept < 0){
-    accept = exp(log_accept);
-  }
-  
-  // if swap accepted update labels, weights and similarity parameter
-  if(arma::randu<double>( ) < accept){
-    
-    cluster_labels_categorical = new_labels;
-    cluster_weights_categorical = new_weights;
-    context_similarity = new_context_similarity;
-    
-  }
-  
+  return sim;  
 }

@@ -5,16 +5,24 @@ similarity_mat <- function(cluster_record) {
     .Call(`_BayesicGibbs_similarity_mat`, cluster_record)
 }
 
-cluster_weight_posterior <- function(concentration_0, cluster_labels, num_clusters) {
-    .Call(`_BayesicGibbs_cluster_weight_posterior`, concentration_0, cluster_labels, num_clusters)
+entropy <- function(class_weights) {
+    .Call(`_BayesicGibbs_entropy`, class_weights)
+}
+
+dirichlet_posterior <- function(concentration_0, cluster_labels, num_clusters) {
+    .Call(`_BayesicGibbs_dirichlet_posterior`, concentration_0, cluster_labels, num_clusters)
 }
 
 cat_counter <- function(data) {
     .Call(`_BayesicGibbs_cat_counter`, data)
 }
 
-sampling <- function(data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning) {
-    .Call(`_BayesicGibbs_sampling`, data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning)
+categorical_clustering <- function(data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning) {
+    .Call(`_BayesicGibbs_categorical_clustering`, data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning)
+}
+
+gaussian_clustering <- function(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE) {
+    .Call(`_BayesicGibbs_gaussian_clustering`, num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors)
 }
 
 entropy <- function(class_weights) {
