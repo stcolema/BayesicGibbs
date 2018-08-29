@@ -856,6 +856,9 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
   // weight in the current context
   double curr_weight = 0.0;
   double context_upweight = 0.0;
+  
+  std::cout << "Reached first for loop in cat function \n";
+  
   for(arma::uword i = 0; i < num_clusters_categorical; i++){
     
     // calculate the log-weights for the context specific cluster and the across
@@ -865,7 +868,17 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
       * (cluster_labels_gaussian(row_index) == cluster_labels_categorical(row_index))
     );
     
+    std::cout << "Reached second for loop\n";
+    
     for(arma::uword j = 0; j < num_cols_cat; j++){
+      
+      std::cout << j << "\n\n";
+      std::cout << class_probabilities(j).n_cols << "\n";
+      std::cout << class_probabilities(j).n_rows << "\n";
+      
+      std::cout << i << "\n";
+      std::cout << point(j) << "\n";
+      std::cout << class_probabilities(j)(i, point(j)) << "\n";
       
       probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
     }
@@ -873,6 +886,8 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
     // As logs can sum rather than multiply the components
     probabilities(i) = curr_weight + probabilities(i) + context_upweight;
   }
+  
+  std::cout << "Manipulation for overflow\n";
   
   // to handle overflowing
   probabilities = exp(probabilities - max(probabilities));
@@ -1087,6 +1102,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
   arma::vec output = arma::zeros<arma::vec>(n + num_clusters_categorical + 1);
   
   // std::cout << "Assign labels to output\n";
+  // std::cout << cluster_labels_categorical.n_elem << "\n";
   output.subvec(0, n - 1) = arma::conv_to<arma::vec>::from(cluster_labels_categorical); //X;
   
   // std::cout << "Assign weights to output\n";
@@ -1097,7 +1113,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
 }
 
 // [[Rcpp::export]]
-arma::mat mdi(arma::mat gaussian_data,
+Rcpp::List mdi(arma::mat gaussian_data,
               arma::umat categorical_data,
               arma::vec mu_0,
               double lambda_0,
@@ -1122,7 +1138,7 @@ arma::mat mdi(arma::mat gaussian_data,
   // Declare the sample size and dimensionality of the continuous and 
   // categorical data
   
-  // std::cout << "In function \n";
+  std::cout << "In function \n";
   
   arma::uword n = gaussian_data.n_rows;
   arma::uword num_cols_cont = gaussian_data.n_cols;
@@ -1137,7 +1153,7 @@ arma::mat mdi(arma::mat gaussian_data,
   arma::uword min_num_clusters = std::min(num_clusters_gaussian,
                                           num_clusters_categorical);
   
-  // std::cout << "Nomalising data\n";
+  std::cout << "Nomalising data\n";
   
   //  Normalise the continuous data
   // gaussian_data = normalise_data(gaussian_data, num_cols_cont);
@@ -1145,7 +1161,7 @@ arma::mat mdi(arma::mat gaussian_data,
   
   gaussian_data = arma::normalise(gaussian_data);
   
-  // std::cout << "Data normalised\n";
+  std::cout << "Data normalised\n";
   
   // Declare global variance and mean - used in outlier t-distribution 
   // (if included)
@@ -1166,12 +1182,13 @@ arma::mat mdi(arma::mat gaussian_data,
   // iteration
   arma::field<arma::cube> loc_mu_variance(2);
   
-  // std::cout << "Declared to mean/variance thing \n";
+  std::cout << "Declared to mean/variance thing \n";
   
   // Declare the field for the phi variable for the categorical data
   arma::uvec cat_count(num_cols_cat);
   cat_count = cat_counter(categorical_data);
   arma::field<arma::mat> class_probabilities(num_cols_cat);
+  
   class_probabilities = declare_class_probs_field(cat_count,
                                                   num_cols_cat,
                                                   num_clusters_categorical);
@@ -1185,8 +1202,8 @@ arma::mat mdi(arma::mat gaussian_data,
   
   arma::vec curr_gaussian_prob_vec(num_clusters_gaussian);
   arma::vec curr_categorical_prob_vec(num_clusters_categorical);
-  
-  // std::cout << "Declared prob vectors \n";
+
+  std::cout << "Declared prob vectors \n";
   
   // the record for similarity in each clustering
   arma::uword eff_count = ceil((double)(num_iter - burn) / (double)thinning);
@@ -1199,13 +1216,18 @@ arma::mat mdi(arma::mat gaussian_data,
   
   arma::vec labels_weights_phi(n + num_clusters_categorical + 1);
   
-  // std::cout << "All declared \n";
+  arma::vec entropy_cw(num_iter);
+  
+  std::cout << "All declared \n";
   
   for(arma::uword i = 0; i < num_iter; i++){
+    
+    
+    
     // sample the strategic latent variable, v
     v = Rf_rgamma(n, Z);
     
-    // std::cout << "Sampled v \n";
+    std::cout << "Sampled v \n";
     
     // sample cluster weights for the two datasets
     cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_gaussian,
@@ -1216,10 +1238,13 @@ arma::mat mdi(arma::mat gaussian_data,
                                                       cluster_labels_categorical,
                                                       num_clusters_categorical);
     
-    // std::cout << "Sampled cluster weights \n";
+    
+    entropy_cw(i) = entropy(cluster_weights_gaussian);
+    
+    std::cout << "Sampled cluster weights \n";
     
     
-    // std::cout << "\nSampling variance and mena \n";
+    std::cout << "\nSampling variance and mena \n";
     // std::cout << cluster_labels_gaussian << "\n\n";
     
     // Sample the posterior mean and variance for the gaussian data
@@ -1232,7 +1257,7 @@ arma::mat mdi(arma::mat gaussian_data,
                                              lambda_0,
                                              mu_0);
     
-    // std::cout << "Variance sampled\n";
+    std::cout << "Variance sampled\n";
     
     // For the categorical data, sample the probabilities for each class
     class_probabilities = sample_class_probabilities(class_probabilities,
@@ -1252,7 +1277,7 @@ arma::mat mdi(arma::mat gaussian_data,
                                                     n,
                                                     min_num_clusters);
     
-    // std::cout << "Sampled phi \n";
+    std::cout << "Sampled phi \n";
     
     // Calculate the current normalising constant (consider being more clever 
     // about this) 
@@ -1261,14 +1286,14 @@ arma::mat mdi(arma::mat gaussian_data,
                                        context_similarity,
                                        min_num_clusters);
     
-    // std::cout << "Z calculated \n";
+    std::cout << "Z calculated \n";
     
     // sample 
     for(arma::uword j = 0; j < n; j++){
       
       // for each point create the vector of probabilities associated with 
       // assignment to each cluster
-      // std::cout << "Gaussian cluser prob vec next\n";
+      std::cout << "Gaussian cluser prob vec next\n";
       
       curr_gaussian_prob_vec = mdi_gaussian_cluster_probabilities(j,
                                                              gaussian_data,
@@ -1284,7 +1309,7 @@ arma::mat mdi(arma::mat gaussian_data,
                                                              global_variance,
                                                              t_df);
       
-      // std::cout << "Categorical cluser prob vec next\n";
+      std::cout << "Categorical cluser prob vec next\n";
       
       curr_categorical_prob_vec = mdi_categorical_cluster_probabilities(j,
                                                                    categorical_data,
@@ -1296,18 +1321,23 @@ arma::mat mdi(arma::mat gaussian_data,
                                                                    cluster_labels_gaussian,
                                                                    cluster_labels_categorical);
       
+      std::cout << "Predict label per point\n";
       
       // update labels - in gaussian data this is only if the current point is 
       // not fixed
       if(! fix_vec[j]){
+        std::cout << "Gaussian\n";
         cluster_labels_gaussian(j) = cluster_predictor(curr_gaussian_prob_vec);
       }
       
+      std::cout << "Categorical\n";
       cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
       
     }
     
-    // std::cout << "All the context update stuff\n";
+    std::cout << "All the context update stuff\n";
+    
+    // std::cout << cluster_labels_categorical.n_elem << "\n"; 
     
     // Update cluster labels in second dataset
     // Return the new labels, weights and similarity in a single vector
@@ -1323,17 +1353,17 @@ arma::mat mdi(arma::mat gaussian_data,
     
     // Separate the output into the relevant components
     
-    // std::cout << "Values calculated now sharing out\n";
+    std::cout << "Values calculated now sharing out\n";
     cluster_labels_categorical = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
     
-    // std::cout << "cluster labels updated \n";
+    std::cout << "cluster labels updated \n";
     
     cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
     
-    // std::cout <<"cluster weights updated \n";
+    std::cout <<"cluster weights updated \n";
     
     context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
-    // std::cout <<"phi updated \n";
+    std::cout <<"phi updated \n";
     
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
@@ -1343,7 +1373,15 @@ arma::mat mdi(arma::mat gaussian_data,
   }
   
   // construct similarity matrix
-  arma::mat sim(n, n);
+  arma::mat sim(n, n); 
+  arma::mat cat_sim(n, n);
   sim = similarity_mat(gaussian_record);
-  return sim;  
+  cat_sim = similarity_mat(categorical_record);
+  
+  return List::create(Named("similarity") = sim,
+                      Named("Categorical_similarity") = cat_sim,
+                      Named("class_record") = gaussian_record,
+                      Named("entropy") = entropy_cw);
+  
+  // return sim;  
 }

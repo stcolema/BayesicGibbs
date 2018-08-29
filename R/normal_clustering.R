@@ -612,7 +612,6 @@ mcmc_out <- function(MS_object,
     # Check if instantly ok
     rec_burn <- ifelse(is.null(rec_burn), 1, rec_burn)
 
-
     entropy_scatter <- ggplot(data = entropy_data, mapping = aes(x = Index, y = Entropy)) +
       geom_point() +
       geom_vline(mapping = aes(xintercept = rec_burn, colour = "Reccomended"), lty = 2) +
@@ -712,6 +711,7 @@ MS_dataset <- function(MS_object, train = NULL) {
 #' @param train A NULL, TRUE or FALSE value informing if supervised (TRUE),
 #' semi-supervised (NULL) or unsupervised (FALSE)
 #' @param MS_object The MS object from pRolocData being analysed
+#' @param k The number of clusters in the dataset
 #' @param N The number of observations
 #' @return A vector of integers corresponding to the cluster allocation of the N
 #' observations
@@ -719,6 +719,7 @@ cluster_label_prior <- function(class_labels_0,
                                 nk,
                                 train,
                                 MS_object,
+                                k,
                                 N) {
   # Generate class labels
   if (is.null(class_labels_0)) {
