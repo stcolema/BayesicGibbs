@@ -111,11 +111,17 @@ arma::mat scale_n(arma::mat scale_0,
                   arma::vec sample_mean){
   arma::mat scale_out;
   
-  scale_out = (scale_0
-                 + sample_covariance
-                 + ((lambda_0 * sample_size) / (lambda_0 + sample_size))
-                 * (sample_mean - mu_0) * arma::trans(sample_mean - mu_0)
-  ); 
+  
+  if(sample_size > 0){
+    scale_out = (scale_0
+                   + sample_covariance
+                   + ((lambda_0 * sample_size) / (lambda_0 + sample_size))
+                   * (sample_mean - mu_0) * arma::trans(sample_mean - mu_0)
+    );
+    return scale_out;
+  }
+  
+  scale_out = scale_0; 
   return scale_out;
 }
 
@@ -188,6 +194,8 @@ arma::mat variance_posterior(int df_0,
   arma::mat sample_covariance(num_cols, num_cols);
   arma::mat variance_out(num_cols, num_cols);
   
+  // std::cout << sample_size << "\n";
+  
   if (sample_size > 0){
     
     sample_mean = arma::trans(arma::mean(data, 0));
@@ -215,6 +223,9 @@ arma::mat variance_posterior(int df_0,
     sample_size,
     sample_mean
   );
+  
+  
+  // std::cout << scale_n_value << "\n";
   
   variance_out = arma::iwishrnd(scale_n_value, df_n);
   
@@ -250,6 +261,12 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
     
     // std::cout << mean_variance_field(1).slice(j - 1) << "\n";
     
+    // std::cout << "\n" << df_0 << "\n";
+    
+    // if(cluster_data.n_rows < 10){
+      // std::cout << cluster_data << "\n\n";
+    // }
+    
     mean_variance_field(0).slice(j - 1) = variance_posterior(
       df_0,
       scale_0,
@@ -276,13 +293,23 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
 arma::mat normalise_data(arma::mat data,
                          arma::uword num_cols,
                          bool gaussian = true){
-  arma::vec median_vec(num_cols);
-  arma::vec sd_vec(num_cols);
+  
+  arma::rowvec mean_vec(num_cols);
+  arma::rowvec sd_vec(num_cols);
+  
+  // std::cout << "Vectors for nomalising declared\n";
+  
+  // std::cout << "Mean of data:\n" << arma::mean(data, 0) << "\n";
+  
+  // std::cout << "\nSD of data:\n" << arma::stddev(data, 0) << "\n";
   
   if(gaussian){
-    median_vec = arma::median(data, 0);
+    mean_vec = arma::mean(data, 0);
     sd_vec = arma::stddev(data, 0);
-    data = (data - median_vec) / sd_vec;
+    
+    // std::cout << "values assigned, now normalising:\n";
+    
+    data = (data - mean_vec) / sd_vec;
   }
   return data;
 }
@@ -978,7 +1005,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
   double new_context_similarity = 0.0;
   
   arma::uvec new_labels(n);
-  arma::vec new_weights;
+  arma::vec new_weights(num_clusters_categorical);
   
   double log_old_similarity = 0.0; 
   double log_new_similarity = 0.0;
@@ -1004,8 +1031,15 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
     // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
     // cluster_labels_categorical.elem(label_2_ind).fill(i);
     
+    // std::cout << "Swapping labels\n";
+    
     new_labels = swap_labels(cluster_labels_categorical, i, new_pos);
+    
+    // std::cout << "Swapping weights\n";
+    
     new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
+    
+    // std::cout << "Calculating new phi\n";
     
     new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
                                                         new_labels,
@@ -1032,8 +1066,15 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
     // if swap accepted update labels, weights and similarity parameter
     if(arma::randu<double>( ) < accept){
       
+      // std::cout << "Accept and assign updates\n";
+      
+      // std::cout << "Labels\n";
       cluster_labels_categorical = new_labels;
+      
+      // std::cout << "Weights\n";
       cluster_weights_categorical = new_weights;
+      
+      // std::cout << "Phi\n\n";
       context_similarity = new_context_similarity;
       
     }
@@ -1042,10 +1083,16 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
   //                               cluster_labels_categorical.end());
   // arma::vec X(doubleVec);
 
+  // std::cout << "Create output vector\n";
   arma::vec output = arma::zeros<arma::vec>(n + num_clusters_categorical + 1);
+  
+  // std::cout << "Assign labels to output\n";
   output.subvec(0, n - 1) = arma::conv_to<arma::vec>::from(cluster_labels_categorical); //X;
+  
+  // std::cout << "Assign weights to output\n";
+  
   output.subvec(n, n + num_clusters_categorical - 1) = cluster_weights_categorical;
-  output.subvec(n, n + num_clusters_categorical) = context_similarity;
+  output(n + num_clusters_categorical) = context_similarity;
   return output;
 }
 
@@ -1074,6 +1121,9 @@ arma::mat mdi(arma::mat gaussian_data,
   
   // Declare the sample size and dimensionality of the continuous and 
   // categorical data
+  
+  // std::cout << "In function \n";
+  
   arma::uword n = gaussian_data.n_rows;
   arma::uword num_cols_cont = gaussian_data.n_cols;
   
@@ -1087,9 +1137,15 @@ arma::mat mdi(arma::mat gaussian_data,
   arma::uword min_num_clusters = std::min(num_clusters_gaussian,
                                           num_clusters_categorical);
   
-  //  Normalise the continuous data
-  gaussian_data = normalise_data(gaussian_data, num_cols_cont);
+  // std::cout << "Nomalising data\n";
   
+  //  Normalise the continuous data
+  // gaussian_data = normalise_data(gaussian_data, num_cols_cont);
+  
+  
+  gaussian_data = arma::normalise(gaussian_data);
+  
+  // std::cout << "Data normalised\n";
   
   // Declare global variance and mean - used in outlier t-distribution 
   // (if included)
@@ -1110,6 +1166,8 @@ arma::mat mdi(arma::mat gaussian_data,
   // iteration
   arma::field<arma::cube> loc_mu_variance(2);
   
+  // std::cout << "Declared to mean/variance thing \n";
+  
   // Declare the field for the phi variable for the categorical data
   arma::uvec cat_count(num_cols_cat);
   cat_count = cat_counter(categorical_data);
@@ -1128,6 +1186,8 @@ arma::mat mdi(arma::mat gaussian_data,
   arma::vec curr_gaussian_prob_vec(num_clusters_gaussian);
   arma::vec curr_categorical_prob_vec(num_clusters_categorical);
   
+  // std::cout << "Declared prob vectors \n";
+  
   // the record for similarity in each clustering
   arma::uword eff_count = ceil((double)(num_iter - burn) / (double)thinning);
   
@@ -1139,9 +1199,13 @@ arma::mat mdi(arma::mat gaussian_data,
   
   arma::vec labels_weights_phi(n + num_clusters_categorical + 1);
   
+  // std::cout << "All declared \n";
+  
   for(arma::uword i = 0; i < num_iter; i++){
     // sample the strategic latent variable, v
     v = Rf_rgamma(n, Z);
+    
+    // std::cout << "Sampled v \n";
     
     // sample cluster weights for the two datasets
     cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_gaussian,
@@ -1152,6 +1216,11 @@ arma::mat mdi(arma::mat gaussian_data,
                                                       cluster_labels_categorical,
                                                       num_clusters_categorical);
     
+    // std::cout << "Sampled cluster weights \n";
+    
+    
+    // std::cout << "\nSampling variance and mena \n";
+    // std::cout << cluster_labels_gaussian << "\n\n";
     
     // Sample the posterior mean and variance for the gaussian data
     loc_mu_variance = mean_variance_sampling(gaussian_data,
@@ -1163,6 +1232,7 @@ arma::mat mdi(arma::mat gaussian_data,
                                              lambda_0,
                                              mu_0);
     
+    // std::cout << "Variance sampled\n";
     
     // For the categorical data, sample the probabilities for each class
     class_probabilities = sample_class_probabilities(class_probabilities,
@@ -1182,6 +1252,8 @@ arma::mat mdi(arma::mat gaussian_data,
                                                     n,
                                                     min_num_clusters);
     
+    // std::cout << "Sampled phi \n";
+    
     // Calculate the current normalising constant (consider being more clever 
     // about this) 
     Z = calculate_normalising_constant(cluster_weights_gaussian,
@@ -1189,12 +1261,15 @@ arma::mat mdi(arma::mat gaussian_data,
                                        context_similarity,
                                        min_num_clusters);
     
+    // std::cout << "Z calculated \n";
     
     // sample 
     for(arma::uword j = 0; j < n; j++){
       
       // for each point create the vector of probabilities associated with 
       // assignment to each cluster
+      // std::cout << "Gaussian cluser prob vec next\n";
+      
       curr_gaussian_prob_vec = mdi_gaussian_cluster_probabilities(j,
                                                              gaussian_data,
                                                              num_clusters_gaussian,
@@ -1208,6 +1283,8 @@ arma::mat mdi(arma::mat gaussian_data,
                                                              global_mean,
                                                              global_variance,
                                                              t_df);
+      
+      // std::cout << "Categorical cluser prob vec next\n";
       
       curr_categorical_prob_vec = mdi_categorical_cluster_probabilities(j,
                                                                    categorical_data,
@@ -1229,6 +1306,8 @@ arma::mat mdi(arma::mat gaussian_data,
       
     }
     
+    // std::cout << "All the context update stuff\n";
+    
     // Update cluster labels in second dataset
     // Return the new labels, weights and similarity in a single vector
     labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
@@ -1242,9 +1321,18 @@ arma::mat mdi(arma::mat gaussian_data,
                                               n);
     
     // Separate the output into the relevant components
+    
+    // std::cout << "Values calculated now sharing out\n";
     cluster_labels_categorical = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
+    
+    // std::cout << "cluster labels updated \n";
+    
     cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
+    
+    // std::cout <<"cluster weights updated \n";
+    
     context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
+    // std::cout <<"phi updated \n";
     
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
