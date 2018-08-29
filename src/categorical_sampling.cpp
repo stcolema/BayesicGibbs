@@ -1302,6 +1302,7 @@ arma::mat mdi(arma::mat gaussian_data,
       if(! fix_vec[j]){
         cluster_labels_gaussian(j) = cluster_predictor(curr_gaussian_prob_vec);
       }
+      
       cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
       
     }
