@@ -108,6 +108,16 @@ empirical_bayes_initialise <- function(data, mu_0, df_0, scale_0, N, k, d) {
 #' @param lambda_0 The prior of shrinkage for mean distribution.
 #' @param concentration_0 The prior for dirichlet distribution of cluster
 #' weights.
+#' @param cat_data Matrix of 1's and 0's used for multiple dataset integration,
+#' Default is NULL in which case a generic mixture of Gaussians is used.
+#' @param cluster_weight_priors_categorical Vector of the prior on cluster 
+#' weights in the categorical data.
+#' @param phi_0 List of vectors, the prior on the distribution of the classes 
+#' over clusters.
+#' @param c_clusters_label_0 Vector of labels for the prior clustering of the 
+#' categorical data.
+#' @param num_clusters_cat Integer of the number of clusters to have as a 
+#' maximum in the categorical dataset. Default is 100.
 #' @param thinning The step between iterations for which results are recorded in
 #' the mcmc output.
 #' @param outlier A bool instructing the sampler to consider an additional
@@ -127,31 +137,37 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
                            scale_0 = NULL,
                            lambda_0 = 0.01,
                            concentration_0 = 0.1,
+                           cat_data = NULL,
+                           cluster_weight_priors_categorical = 1,
+                           phi_0 = NULL,
+                           c_clusters_label_0 = NULL,
+                           num_clusters_cat = 100,
                            thinning = 25,
                            outlier = FALSE,
                            t_df = 4.0,
-                           record_posteriors = FALSE) {
+                           record_posteriors = FALSE,
+                           normalise = FALSE) {
   if (is.null(d)) {
     d <- ncol(data)
   }
-
+  
   if (is.null(N)) {
     N <- nrow(data)
   }
-
-
+  
+  
   if (is.null(num_iter)) {
     num_iter <- min((d^2) * 1000 / sqrt(N), 10000)
   }
-
+  
   if (is.null(burn)) {
     burn <- floor(num_iter / 10)
   }
-
+  
   if (burn > num_iter) {
     stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
   }
-
+  
   if (thinning > (num_iter - burn)) {
     if (thinning > (num_iter - burn) & thinning < 5 * (num_iter - burn)) {
       stop("Thinning factor exceeds iterations feasibly recorded. Stopping.")
@@ -164,44 +180,95 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
       ))
     }
   }
-
+  
   data <- as.matrix(data)
-
+  
   # Empirical Bayes
   parameters_0 <- empirical_bayes_initialise(data, mu_0, df_0, scale_0, N, k, d)
-
+  
   mu_0 <- parameters_0$mu_0
   df_0 <- parameters_0$df_0
   scale_0 <- parameters_0$scale_0
-
+  
   if (is.null(concentration_0)) {
-    concentration_0 <- rep(0.1, k)
-  } else if (length(concentration_0) < k) {
+    concentration_0 <- rep(0.1, (k + outlier))
+  } else if (length(concentration_0) < (k + outlier)) {
     print(paste0(
-      "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
       "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
       " for concentration prior."
     ))
     concentration_0 <- rep(concentration_0, k + outlier)
   }
-
-  sim <- gaussian_clustering(
-    num_iter,
-    concentration_0,
-    scale_0,
-    class_labels,
-    fix_vec,
-    mu_0,
-    lambda_0,
-    data,
-    df_0,
-    k,
-    burn,
-    thinning,
-    outlier,
-    t_df,
-    record_posteriors
-  )
+  
+  if (!is.null(cat_data)) {
+    if (is.null(cluster_weight_priors_categorical)) {
+      cluster_weight_priors_categorical <- rep(1, num_clusters_cat)
+    } else if (length(cluster_weight_priors_categorical) < num_clusters_cat) {
+      print(paste0(
+        "Creating vector of ", num_clusters_cat, " repetitions of ", cluster_weight_priors_categorical,
+        " for categorical cluster weights prior."
+      ))
+      cluster_weight_priors_categorical <- rep(cluster_weight_priors_categorical, num_clusters_cat)
+    }
+    
+    if (is.null(phi_0)) {
+      phi_0 <- phi_prior(cat_data)
+    }
+    
+    if (is.null(c_clusters_label_0)) {
+      c_clusters_label_0 <- sample(1:num_clusters_cat,
+                                   size = N,
+                                   replace = T,
+                                   prob = cluster_weight_priors_categorical
+      )
+    }
+  }
+  
+  if (is.null(cat_data)) {
+    sim <- gaussian_clustering(
+      num_iter,
+      concentration_0,
+      scale_0,
+      class_labels,
+      fix_vec,
+      mu_0,
+      lambda_0,
+      data,
+      df_0,
+      k,
+      burn,
+      thinning,
+      outlier,
+      t_df,
+      record_posteriors,
+      normalise
+    )
+  } else {
+    sim <- mdi(
+      data,
+      cat_data,
+      mu_0,
+      lambda_0,
+      scale_0,
+      df_0,
+      concentration_0,
+      cluster_weight_priors_categorical,
+      phi_0,
+      class_labels,
+      c_clusters_label_0,
+      k,
+      num_clusters_cat,
+      fix_vec,
+      num_iter,
+      burn,
+      thinning,
+      outlier,
+      t_df,
+      record_posteriors,
+      normalise
+    )
+  }
+  sim
 }
 
 # --- Categorical clustering ---------------------------------------------------
@@ -359,6 +426,16 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 #' @param lambda_0 The prior of shrinkage for mean distribution.
 #' @param concentration_0 The prior for dirichlet distribution of cluster
 #' weights.
+#' @param cat_data Matrix of 1's and 0's used for multiple dataset integration,
+#' Default is NULL in which case a generic mixture of Gaussians is used.
+#' @param cluster_weight_priors_categorical Vector of the prior on cluster 
+#' weights in the categorical data.
+#' @param phi_0 List of vectors, the prior on the distribution of the classes 
+#' over clusters.
+#' @param c_clusters_label_0 Vector of labels for the prior clustering of the 
+#' categorical data.
+#' @param num_clusters_cat Integer of the number of clusters to have as a 
+#' maximum in the categorical dataset. Default is 100.
 #' @param train: instruction to include all data (NULL), labelled data (TRUE) or
 #' unlabelled data (FALSE). Default is NULL.
 #' @param num_iter The number of iterations to sample over.
@@ -390,6 +467,8 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 #' @param record_posteriors A bool instructing the mcmc function to record the
 #' posterior distributions of the mean and variance for each cluster
 #' (default is FALSE)
+#' @param normalise Bool instructing normalisation of continuous data (default 
+#' is false)
 #' @return A named list including at least the output from the gibbs sampler,
 #' but can include two pheatmaps and a scatter plot of the entropy over
 #' iterations.
@@ -404,6 +483,29 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 #'   main = "Gene clustering by organelle",
 #'   prediction_threshold = 0.5
 #' )
+#' 
+#' Generate some nonsense categorical data
+#' cat_data <- matrix(nrow = 1371, ncol = 5)
+#' cat_data[, 1] <- c(rep(1, 300), rep(0, 1071))
+#' cat_data[, 2] <- c(rep(0, 300), rep(1, 300), rep(0, 771))
+#' cat_data[, 3] <- c(rep(0, 600), rep(1, 300), rep(0, 471))
+#' cat_data[, 4] <- c(rep(0, 800), rep(1, 300), rep(0, 271))
+#' cat_data[, 5] <- c(rep(0, 1100), rep(1, 271))
+#' 
+#' # Complete noise
+#' cat_data <-  matrix(sample(0:1, 1371 * 10, replace=TRUE), nrow = 1371, ncol = 10)
+#' 
+#' stuff <- mcmc_out(HEK293T2011,
+#'                   cat_data = cat_data,
+#'                   num_iter = 10,
+#'                   burn = 1,
+#'                   thinning = 1,
+#'                   outlier = TRUE,
+#'                   heat_plot = T,
+#'                   main = "Gene clustering by organelle",
+#'                   prediction_threshold = 0.4,
+#'                   sense_check_map = F
+#' )
 mcmc_out <- function(MS_object,
                      class_labels_0 = NULL,
                      mu_0 = NULL,
@@ -411,6 +513,11 @@ mcmc_out <- function(MS_object,
                      scale_0 = NULL,
                      lambda_0 = 0.01,
                      concentration_0 = 0.1,
+                     cat_data = NULL,
+                     cluster_weight_priors_categorical = 1,
+                     phi_0 = NULL,
+                     c_clusters_label_0 = NULL,
+                     num_clusters_cat = 100,
                      train = NULL,
                      num_iter = NULL,
                      burn = NULL,
@@ -426,62 +533,64 @@ mcmc_out <- function(MS_object,
                      window_length = min(25, num_iter / 5),
                      mean_tolerance = 0.0005,
                      sd_tolerance = 0.0005,
+                     sense_check_map = TRUE,
                      outlier = FALSE,
                      t_df = 4.0,
                      prediction_threshold = 0.6,
-                     record_posteriors = FALSE) {
+                     record_posteriors = FALSE,
+                     normalise = FALSE) {
   # MS data
   MS_data <- MS_dataset(MS_object, train = train)
-
+  
   mydata <- MS_data$data
   nk <- MS_data$nk
   row_names <- MS_data$row_names
   fix_vec <- MS_data$fix_vec
-
+  
   class_labels <- data.frame(Class = mydata$markers)
-
+  
   classes_present <- unique(fData(markerMSnSet(MS_object))[, "markers"])
-
+  
   rownames(class_labels) <- rownames(mydata)
-
+  
   # Numerical data of interest for clustering
   num_data <- mydata %>%
     dplyr::select(-markers)
-
+  
   # Parameters
   k <- length(classes_present)
   N <- nrow(num_data)
   d <- ncol(num_data)
-
+  
   # Key to transforming from int to class
   class_labels_key <- data.frame(Class = classes_present) # , Class_num = 1:k)
   class_labels_key %<>%
     arrange(Class) %>%
     dplyr::mutate(Class_key = as.numeric(Class))
-
+  
   class_labels %<>%
     mutate(Class_ind = as.numeric(mydata$markers))
-
+  
   if (outlier) {
     outlier_row <- data.frame(Class = c("Outlier"), Class_key = c(k + 1))
     class_labels_key <- suppressWarnings(bind_rows(class_labels_key, outlier_row))
   }
-
-  class_labels_0 <- cluster_label_prior(class_labels_0, nk, train, MS_object, N)
-
-
+  
+  class_labels_0 <- cluster_label_prior(class_labels_0, nk, train, MS_object, k, N)
+  
+  
   if (is.null(num_iter)) {
     num_iter <- floor(min((d^2) * 1000 / sqrt(N), 10000))
   }
-
+  
   if (is.null(burn)) {
     burn <- floor(num_iter / 10)
   }
-
+  
   if (burn > num_iter) {
     stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
   }
-
+  
   if (thinning > (num_iter - burn)) {
     if (thinning > (num_iter - burn) & thinning < 5 * (num_iter - burn)) {
       stop("Thinning factor exceeds iterations feasibly recorded. Stopping.")
@@ -494,124 +603,132 @@ mcmc_out <- function(MS_object,
       ))
     }
   }
-
   gibbs <- gibbs_sampling(num_data, k, class_labels_0, fix_vec,
-    d = d,
-    N = N,
-    num_iter = num_iter,
-    burn = burn,
-    mu_0 = mu_0,
-    df_0 = df_0,
-    scale_0 = scale_0,
-    lambda_0 = lambda_0,
-    concentration_0 = concentration_0,
-    thinning = thinning,
-    outlier = outlier,
-    t_df = t_df,
-    record_posteriors = record_posteriors
+                          d = d,
+                          N = N,
+                          num_iter = num_iter,
+                          burn = burn,
+                          mu_0 = mu_0,
+                          df_0 = df_0,
+                          scale_0 = scale_0,
+                          lambda_0 = lambda_0,
+                          concentration_0 = concentration_0,
+                          cat_data = cat_data,
+                          cluster_weight_priors_categorical = cluster_weight_priors_categorical,
+                          phi_0 = phi_0,
+                          c_clusters_label_0 = c_clusters_label_0,
+                          num_clusters_cat = num_clusters_cat,
+                          thinning = thinning,
+                          outlier = outlier,
+                          t_df = t_df,
+                          record_posteriors = record_posteriors,
+                          normalise = normalise
   )
-
+  
   print("Gibbs sampling complete")
-
-
+  # return(gibbs)
+  
   # Create a dataframe for the predicted class
   class_allocation_table <- with(
     stack(data.frame(t(gibbs$class_record))),
     table(ind, values)
   )
-
+  
   eff_iter <- ceiling((num_iter - burn) / thinning)
-
+  
   # Create a column Class_key containing an integer in 1:k representing the most
   # common class allocation, and a Count column with the proportion of times the
   # entry was allocated to said class
   predicted_classes <- data.frame(
     Class_key =
       as.numeric(colnames(class_allocation_table)
-      [apply(
-          class_allocation_table,
-          1,
-          which.max
-        )]),
+                 [apply(
+                   class_allocation_table,
+                   1,
+                   which.max
+                 )]),
     Count = apply(class_allocation_table, 1, max) / eff_iter
   )
-
+  
   # Change the prediction to NA for any entry with a proportion below the input
   # threshold
   predicted_classes[predicted_classes$Count < prediction_threshold, ] <- NA
-
+  
   predicted_classes$Class <- class_labels_key$Class[match(
     predicted_classes$Class_key,
     class_labels_key$Class_key
   )]
-
+  
   gibbs$predicted_class <- predicted_classes
-
+  
   # Example input for annotation_row in pheatmap
   annotation_row <- class_labels %>% dplyr::select(Class)
   annotation_row %<>%
     mutate(Predicted_class = predicted_classes$Class)
-
+  
   rownames(num_data) <- row_names
   # print(rownames(mydata[1:10,]))
-
+  
   rownames(annotation_row) <- rownames(num_data)
-
+  
   col_pal <- RColorBrewer::brewer.pal(9, "Blues")
-
-  pauls_heatmap <- annotated_heatmap(num_data, annotation_row,
-    sort_by_col = Predicted_class,
-    train = train,
-    main = "Paul's sense check heatmap",
-    cluster_row = FALSE,
-    cluster_cols = FALSE,
-    color = col_pal,
-    fontsize = fontsize,
-    fontsize_row = fontsize_row,
-    fontsize_col = fontsize_col
-  )
-
+  
+  if (sense_check_map) {
+    pauls_heatmap <- annotated_heatmap(num_data, annotation_row,
+                                       sort_by_col = Predicted_class,
+                                       train = train,
+                                       main = "Paul's sense check heatmap",
+                                       cluster_row = FALSE,
+                                       cluster_cols = FALSE,
+                                       color = col_pal,
+                                       fontsize = fontsize,
+                                       fontsize_row = fontsize_row,
+                                       fontsize_col = fontsize_col
+    )
+  }
+  
   # return(pauls_heatmap)
-
+  
   all_data <- dplyr::bind_cols(num_data, dplyr::select(gibbs$predicted_class, Class))
   all_data$Fixed <- fix_vec
   all_data$Protein <- rownames(num_data)
+  
   # rownames(all_data) <- rownames(num_data)
-
+  
   if (heat_plot) {
-
+    
     # dissimilarity matrix
     dissim <- 1 - gibbs$similarity
-
+    
     # Require names to associate data in annotation columns with original data
     colnames(dissim) <- rownames(num_data)
     rownames(dissim) <- rownames(num_data)
-
+    
     col_pal <- RColorBrewer::brewer.pal(9, "Blues")
-
+    
     heat_map <- annotated_heatmap(dissim, annotation_row,
-      train = train,
-      main = main,
-      cluster_row = cluster_row,
-      cluster_cols = cluster_cols,
-      color = col_pal,
-      fontsize = fontsize,
-      fontsize_row = fontsize_row,
-      fontsize_col = fontsize_col
+                                  train = train,
+                                  main = main,
+                                  cluster_row = cluster_row,
+                                  cluster_cols = cluster_cols,
+                                  color = col_pal,
+                                  fontsize = fontsize,
+                                  fontsize_row = fontsize_row,
+                                  fontsize_col = fontsize_col
     )
   }
   if (entropy_plot) {
     entropy_data <- data.frame(Index = 1:num_iter, Entropy = gibbs$entropy)
-
+    
     rec_burn <- entropy_window(gibbs$entropy,
-      window_length = window_length,
-      mean_tolerance = mean_tolerance,
-      sd_tolerance = sd_tolerance
+                               window_length = window_length,
+                               mean_tolerance = mean_tolerance,
+                               sd_tolerance = sd_tolerance
     )
-
+    
     # Check if instantly ok
     rec_burn <- ifelse(is.null(rec_burn), 1, rec_burn)
-
+    
     entropy_scatter <- ggplot(data = entropy_data, mapping = aes(x = Index, y = Entropy)) +
       geom_point() +
       geom_vline(mapping = aes(xintercept = rec_burn, colour = "Reccomended"), lty = 2) +
@@ -647,7 +764,7 @@ mcmc_out <- function(MS_object,
       data = all_data
     ))
   }
-
+  
   return(list(gibbs = gibbs, data = all_data))
 }
 

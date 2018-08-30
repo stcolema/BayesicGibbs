@@ -71,6 +71,21 @@ returned. If below this predicted class is NA.}
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
 
+\item{cat_data}{Matrix of 1's and 0's used for multiple dataset integration,
+Default is NULL in which case a generic mixture of Gaussians is used.}
+
+\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
+weights in the categorical data.}
+
+\item{phi_0}{List of vectors, the prior on the distribution of the classes 
+over clusters.}
+
+\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
+categorical data.}
+
+\item{num_clusters_cat}{Integer of the number of clusters to have as a 
+maximum in the categorical dataset. Default is 100.}
+
 \item{train:}{instruction to include all data (NULL), labelled data (TRUE) or
 unlabelled data (FALSE). Default is NULL.}
 
@@ -82,6 +97,9 @@ tree.}
 \item{fontsize_row:}{The fontsize in rows in pheatmap.}
 
 \item{fontsize_col:}{The fontsize in columns in pheatmap.}
+
+\item{normalise}{Bool instructing normalisation of continuous data (default 
+is false)}
 }
 \value{
 A named list including at least the output from the gibbs sampler,
@@ -102,5 +120,28 @@ mcmc_object <- mcmc_out(hyperLOPIT2015,
   heat_plot = TRUE,
   main = "Gene clustering by organelle",
   prediction_threshold = 0.5
+)
+
+Generate some nonsense categorical data
+cat_data <- matrix(nrow = 1371, ncol = 5)
+cat_data[, 1] <- c(rep(1, 300), rep(0, 1071))
+cat_data[, 2] <- c(rep(0, 300), rep(1, 300), rep(0, 771))
+cat_data[, 3] <- c(rep(0, 600), rep(1, 300), rep(0, 471))
+cat_data[, 4] <- c(rep(0, 800), rep(1, 300), rep(0, 271))
+cat_data[, 5] <- c(rep(0, 1100), rep(1, 271))
+
+# Complete noise
+cat_data <-  matrix(sample(0:1, 1371 * 10, replace=TRUE), nrow = 1371, ncol = 10)
+
+stuff <- mcmc_out(HEK293T2011,
+                  cat_data = cat_data,
+                  num_iter = 10,
+                  burn = 1,
+                  thinning = 1,
+                  outlier = TRUE,
+                  heat_plot = T,
+                  main = "Gene clustering by organelle",
+                  prediction_threshold = 0.4,
+                  sense_check_map = F
 )
 }

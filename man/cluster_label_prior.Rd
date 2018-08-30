@@ -4,7 +4,7 @@
 \alias{cluster_label_prior}
 \title{Cluster label prior}
 \usage{
-cluster_label_prior(class_labels_0, nk, train, MS_object, N)
+cluster_label_prior(class_labels_0, nk, train, MS_object, k, N)
 }
 \arguments{
 \item{class_labels_0}{An optional prior for clusters in MS_object. If NULL
@@ -17,6 +17,8 @@ data.}
 semi-supervised (NULL) or unsupervised (FALSE)}
 
 \item{MS_object}{The MS object from pRolocData being analysed}
+
+\item{k}{The number of clusters in the dataset}
 
 \item{N}{The number of observations}
 }

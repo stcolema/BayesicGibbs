@@ -46,6 +46,21 @@ is 4)}
 \item{record_posteriors}{A bool instructing the mcmc function to record the
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
+
+\item{cat_data}{Matrix of 1's and 0's used for multiple dataset integration,
+Default is NULL in which case a generic mixture of Gaussians is used.}
+
+\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
+weights in the categorical data.}
+
+\item{phi_0}{List of vectors, the prior on the distribution of the classes 
+over clusters.}
+
+\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
+categorical data.}
+
+\item{num_clusters_cat}{Integer of the number of clusters to have as a 
+maximum in the categorical dataset. Default is 100.}
 }
 \description{
 Carries out gibbs sampling of data and returns a similarity matrix for points
