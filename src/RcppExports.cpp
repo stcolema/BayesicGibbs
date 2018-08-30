@@ -97,8 +97,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // mdi
-arma::mat mdi(arma::mat gaussian_data, arma::umat categorical_data, arma::vec mu_0, double lambda_0, arma::mat scale_0, int df_0, arma::vec cluster_weight_priors_gaussian, arma::vec cluster_weight_priors_categorical, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels_gaussian, arma::uvec cluster_labels_categorical, arma::uword num_clusters_gaussian, arma::uword num_clusters_categorical, std::vector<bool> fix_vec, arma::uword num_iter, arma::uword burn, arma::uword thinning, bool outlier, double t_df, bool record_posteriors);
-RcppExport SEXP _BayesicGibbs_mdi(SEXP gaussian_dataSEXP, SEXP categorical_dataSEXP, SEXP mu_0SEXP, SEXP lambda_0SEXP, SEXP scale_0SEXP, SEXP df_0SEXP, SEXP cluster_weight_priors_gaussianSEXP, SEXP cluster_weight_priors_categoricalSEXP, SEXP phi_priorSEXP, SEXP cluster_labels_gaussianSEXP, SEXP cluster_labels_categoricalSEXP, SEXP num_clusters_gaussianSEXP, SEXP num_clusters_categoricalSEXP, SEXP fix_vecSEXP, SEXP num_iterSEXP, SEXP burnSEXP, SEXP thinningSEXP, SEXP outlierSEXP, SEXP t_dfSEXP, SEXP record_posteriorsSEXP) {
+Rcpp::List mdi(arma::mat gaussian_data, arma::umat categorical_data, arma::vec mu_0, double lambda_0, arma::mat scale_0, int df_0, arma::vec cluster_weight_priors_gaussian, arma::vec cluster_weight_priors_categorical, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels_gaussian, arma::uvec cluster_labels_categorical, arma::uword num_clusters_gaussian, arma::uword num_clusters_categorical, std::vector<bool> fix_vec, arma::uword num_iter, arma::uword burn, arma::uword thinning, bool outlier, double t_df, bool record_posteriors, bool normalise);
+RcppExport SEXP _BayesicGibbs_mdi(SEXP gaussian_dataSEXP, SEXP categorical_dataSEXP, SEXP mu_0SEXP, SEXP lambda_0SEXP, SEXP scale_0SEXP, SEXP df_0SEXP, SEXP cluster_weight_priors_gaussianSEXP, SEXP cluster_weight_priors_categoricalSEXP, SEXP phi_priorSEXP, SEXP cluster_labels_gaussianSEXP, SEXP cluster_labels_categoricalSEXP, SEXP num_clusters_gaussianSEXP, SEXP num_clusters_categoricalSEXP, SEXP fix_vecSEXP, SEXP num_iterSEXP, SEXP burnSEXP, SEXP thinningSEXP, SEXP outlierSEXP, SEXP t_dfSEXP, SEXP record_posteriorsSEXP, SEXP normaliseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -122,7 +122,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type outlier(outlierSEXP);
     Rcpp::traits::input_parameter< double >::type t_df(t_dfSEXP);
     Rcpp::traits::input_parameter< bool >::type record_posteriors(record_posteriorsSEXP);
-    rcpp_result_gen = Rcpp::wrap(mdi(gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier, t_df, record_posteriors));
+    Rcpp::traits::input_parameter< bool >::type normalise(normaliseSEXP);
+    rcpp_result_gen = Rcpp::wrap(mdi(gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier, t_df, record_posteriors, normalise));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -177,7 +178,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_BayesicGibbs_cat_counter", (DL_FUNC) &_BayesicGibbs_cat_counter, 1},
     {"_BayesicGibbs_categorical_clustering", (DL_FUNC) &_BayesicGibbs_categorical_clustering, 9},
     {"_BayesicGibbs_gaussian_clustering", (DL_FUNC) &_BayesicGibbs_gaussian_clustering, 15},
-    {"_BayesicGibbs_mdi", (DL_FUNC) &_BayesicGibbs_mdi, 20},
+    {"_BayesicGibbs_mdi", (DL_FUNC) &_BayesicGibbs_mdi, 21},
     {"_BayesicGibbs_rcpparma_hello_world", (DL_FUNC) &_BayesicGibbs_rcpparma_hello_world, 0},
     {"_BayesicGibbs_rcpparma_outerproduct", (DL_FUNC) &_BayesicGibbs_rcpparma_outerproduct, 1},
     {"_BayesicGibbs_rcpparma_innerproduct", (DL_FUNC) &_BayesicGibbs_rcpparma_innerproduct, 1},
