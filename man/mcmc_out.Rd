@@ -6,13 +6,16 @@
 \usage{
 mcmc_out(MS_object, class_labels_0 = NULL, mu_0 = NULL, df_0 = NULL,
   scale_0 = NULL, lambda_0 = 0.01, concentration_0 = 0.1,
+  cat_data = NULL, cluster_weight_priors_categorical = 1,
+  phi_0 = NULL, c_clusters_label_0 = NULL, num_clusters_cat = 100,
   train = NULL, num_iter = NULL, burn = NULL, thinning = 25,
   heat_plot = TRUE, main = "heatmap_for_similarity", cluster_row = T,
   cluster_cols = T, fontsize = 10, fontsize_row = 6,
   fontsize_col = 6, entropy_plot = TRUE, window_length = min(25,
   num_iter/5), mean_tolerance = 5e-04, sd_tolerance = 5e-04,
-  outlier = FALSE, t_df = 4, prediction_threshold = 0.6,
-  record_posteriors = FALSE)
+  sense_check_map = TRUE, outlier = FALSE, t_df = 4,
+  prediction_threshold = 0.6, record_posteriors = FALSE,
+  normalise = FALSE)
 }
 \arguments{
 \item{MS_object}{A dataset in the format used by pRolocdata.}
@@ -32,6 +35,21 @@ generated using an empirical method.}
 
 \item{concentration_0}{The prior for dirichlet distribution of cluster
 weights.}
+
+\item{cat_data}{Matrix of 1's and 0's used for multiple dataset integration,
+Default is NULL in which case a generic mixture of Gaussians is used.}
+
+\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
+weights in the categorical data.}
+
+\item{phi_0}{List of vectors, the prior on the distribution of the classes 
+over clusters.}
+
+\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
+categorical data.}
+
+\item{num_clusters_cat}{Integer of the number of clusters to have as a 
+maximum in the categorical dataset. Default is 100.}
 
 \item{num_iter}{The number of iterations to sample over.}
 
@@ -71,20 +89,8 @@ returned. If below this predicted class is NA.}
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
 
-\item{cat_data}{Matrix of 1's and 0's used for multiple dataset integration,
-Default is NULL in which case a generic mixture of Gaussians is used.}
-
-\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
-weights in the categorical data.}
-
-\item{phi_0}{List of vectors, the prior on the distribution of the classes 
-over clusters.}
-
-\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
-categorical data.}
-
-\item{num_clusters_cat}{Integer of the number of clusters to have as a 
-maximum in the categorical dataset. Default is 100.}
+\item{normalise}{Bool instructing normalisation of continuous data (default 
+is false)}
 
 \item{train:}{instruction to include all data (NULL), labelled data (TRUE) or
 unlabelled data (FALSE). Default is NULL.}
@@ -97,9 +103,6 @@ tree.}
 \item{fontsize_row:}{The fontsize in rows in pheatmap.}
 
 \item{fontsize_col:}{The fontsize in columns in pheatmap.}
-
-\item{normalise}{Bool instructing normalisation of continuous data (default 
-is false)}
 }
 \value{
 A named list including at least the output from the gibbs sampler,

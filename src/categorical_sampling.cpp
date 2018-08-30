@@ -477,7 +477,7 @@ arma::mat categorical_clustering(arma::umat data,
   
   arma::field<arma::mat> class_probabilities(num_cols);
   
-  // std::cout << "Declaring field of matrices for class probs\n";
+  std::cout << "Declaring field of matrices for class probs\n";
   
   class_probabilities = declare_class_probs_field(cat_count,
                             num_cols,
@@ -851,7 +851,15 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
                                                 arma::uvec cluster_labels_categorical){
   
   // std::cout << "In function cluster_probabilities\n";
+  
+  // std::cout << num_clusters_categorical << "\n";
+  
   arma::vec probabilities = arma::zeros<arma::vec>(num_clusters_categorical);
+  
+  // std::cout << row_index << "\n";
+  
+  // std::cout << "\n\nCategorical data details:\n" << categorical_data.n_rows <<
+    // "\n" << categorical_data.n_cols << "\n\n";
   
   arma::urowvec point = categorical_data.row(row_index);
   
@@ -878,12 +886,12 @@ arma::vec mdi_categorical_cluster_probabilities(arma::uword row_index,
     
     for(arma::uword j = 0; j < num_cols_cat; j++){
       
-      // std::cout << j << "\n\n";
-      // std::cout << class_probabilities(j).n_cols << "\n";
-      // std::cout << class_probabilities(j).n_rows << "\n";
-      
-      // std::cout << i << "\n";
-      // std::cout << point(j) << "\n";
+      // std::cout << "\nColumn: " << j << "\n";
+      // std::cout << "Class probs num cols: " << class_probabilities(j).n_cols << "\n";
+      // std::cout << "Class probs num rows: " << class_probabilities(j).n_rows << "\n";
+
+      // std::cout << "Cluster: " << i << "\n";
+      // std::cout << "Jth value of row: " << point(j) << "\n";
       // std::cout << class_probabilities(j)(i, point(j)) << "\n";
       
       probabilities(i) = probabilities(i) + std::log(class_probabilities(j)(i, point(j)));
