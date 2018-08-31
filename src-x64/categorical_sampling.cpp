@@ -477,7 +477,7 @@ arma::mat categorical_clustering(arma::umat data,
   
   arma::field<arma::mat> class_probabilities(num_cols);
   
-  // std::cout << "Declaring field of matrices for class probs\n";
+  std::cout << "Declaring field of matrices for class probs\n";
   
   class_probabilities = declare_class_probs_field(cat_count,
                             num_cols,
