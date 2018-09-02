@@ -448,6 +448,8 @@ arma::vec categorical_cluster_probabilities(arma::urowvec point,
   return probabilities;
 }
 
+// Predicts the cluster assignments based on a vector of probabilities using
+// the rejection method
 arma::uword cluster_predictor(arma::vec probabilities){
   double u;
   arma::uword pred;
@@ -457,7 +459,7 @@ arma::uword cluster_predictor(arma::vec probabilities){
   return pred;
 }
 
-// The actual clustering all wrapped up in one function
+// The actual categorical clustering all wrapped up in one function
 // [[Rcpp::export]]
 arma::mat categorical_clustering(arma::umat data,
                                  arma::field<arma::vec> phi_prior,
@@ -477,7 +479,7 @@ arma::mat categorical_clustering(arma::umat data,
   
   arma::field<arma::mat> class_probabilities(num_cols);
   
-  std::cout << "Declaring field of matrices for class probs\n";
+  // std::cout << "Declaring field of matrices for class probs\n";
   
   class_probabilities = declare_class_probs_field(cat_count,
                             num_cols,
@@ -485,11 +487,15 @@ arma::mat categorical_clustering(arma::umat data,
   
   // std::cout << "Class probabilities declared\n";
   
+  // std::cout << "Num clusters: " << num_clusters << "\n";
+  
   arma::vec cluster_weights(num_clusters);
   
   arma::vec curr_cluster_probs(num_clusters);
   
   arma::uword eff_count = ceil((double)(num_iter - burn) / (double)thinning);
+  
+  // std::cout << "N: " << n << "\nEff count: " << eff_count << "\n";
   arma::umat record(n, eff_count);
   record.zeros();
   
@@ -528,16 +534,15 @@ arma::mat categorical_clustering(arma::umat data,
       if(! fix_vec(j)){
         cluster_labels(j) = cluster_predictor(curr_cluster_probs);
       }
-      if (i >= burn && (i - burn) % thinning == 0) {
-
-        record.col((i - burn) / thinning) = cluster_labels;
-      }
+    }
+    if (i >= burn && (i - burn) % thinning == 0) {
+      // std::cout << "\n" << i << "\n";
+      record.col((i - burn) / thinning) = cluster_labels;
     }
   }
-    
   arma::mat sim(n, n);
   sim = similarity_mat(record);
-  return sim;  
+  return sim;
 }
 
 // === Gaussian clustering =====================================================
