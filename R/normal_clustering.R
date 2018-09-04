@@ -312,7 +312,7 @@ categorical_gibbs_sampling <- function(data,
 
 
   if (is.null(num_iter)) {
-    num_iter <- min((d^2) * 1000 / sqrt(N), 10000)
+    num_iter <- 10000
   }
 
   if (is.null(burn)) {
@@ -376,6 +376,8 @@ categorical_gibbs_sampling <- function(data,
     burn,
     thinning
   )
+  
+  sim
 }
 
 

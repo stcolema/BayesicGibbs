@@ -289,30 +289,6 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
   return mean_variance_field;
 }
 
-// Normalise continuous data
-arma::mat normalise_data(arma::mat data,
-                         arma::uword num_cols,
-                         bool gaussian = true){
-  
-  arma::rowvec mean_vec(num_cols);
-  arma::rowvec sd_vec(num_cols);
-  
-  // std::cout << "Vectors for nomalising declared\n";
-  
-  // std::cout << "Mean of data:\n" << arma::mean(data, 0) << "\n";
-  
-  // std::cout << "\nSD of data:\n" << arma::stddev(data, 0) << "\n";
-  
-  if(gaussian){
-    mean_vec = arma::mean(data, 0);
-    sd_vec = arma::stddev(data, 0);
-    
-    // std::cout << "values assigned, now normalising:\n";
-    
-    data = (data - mean_vec) / sd_vec;
-  }
-  return data;
-}
 // === Dirichlet ===============================================================
 
 // update the concentration parameter in the Dirichlet distribution
@@ -461,7 +437,7 @@ arma::uword cluster_predictor(arma::vec probabilities){
 
 // The actual categorical clustering all wrapped up in one function
 // [[Rcpp::export]]
-arma::mat categorical_clustering(arma::umat data,
+Rcpp::List categorical_clustering(arma::umat data,
                                  arma::field<arma::vec> phi_prior,
                                  arma::uvec cluster_labels,
                                  arma::vec fix_vec,
@@ -519,8 +495,10 @@ arma::mat categorical_clustering(arma::umat data,
     );
     
     // std::cout << "Class probs calculated\n";
+    // std::cout << class_probabilities << "\n\n";
     
     for(arma::uword j = 0; j < n; j++){
+      
       // sample cluster for each point here
       curr_cluster_probs = categorical_cluster_probabilities(data.row(j),
                                                data,
@@ -542,7 +520,9 @@ arma::mat categorical_clustering(arma::umat data,
   }
   arma::mat sim(n, n);
   sim = similarity_mat(record);
-  return sim;
+  return List::create(Named("similarity") = sim,
+                      Named("class_record") = record);
+  // return sim;
 }
 
 // === Gaussian clustering =====================================================

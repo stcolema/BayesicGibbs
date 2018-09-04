@@ -437,7 +437,7 @@ arma::uword cluster_predictor(arma::vec probabilities){
 
 // The actual categorical clustering all wrapped up in one function
 // [[Rcpp::export]]
-arma::mat categorical_clustering(arma::umat data,
+Rcpp::List categorical_clustering(arma::umat data,
                                  arma::field<arma::vec> phi_prior,
                                  arma::uvec cluster_labels,
                                  arma::vec fix_vec,
@@ -495,8 +495,10 @@ arma::mat categorical_clustering(arma::umat data,
     );
     
     // std::cout << "Class probs calculated\n";
+    // std::cout << class_probabilities << "\n\n";
     
     for(arma::uword j = 0; j < n; j++){
+      
       // sample cluster for each point here
       curr_cluster_probs = categorical_cluster_probabilities(data.row(j),
                                                data,
@@ -518,7 +520,9 @@ arma::mat categorical_clustering(arma::umat data,
   }
   arma::mat sim(n, n);
   sim = similarity_mat(record);
-  return sim;
+  return List::create(Named("similarity") = sim,
+                      Named("class_record") = record);
+  // return sim;
 }
 
 // === Gaussian clustering =====================================================

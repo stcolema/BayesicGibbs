@@ -53,7 +53,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // categorical_clustering
-arma::mat categorical_clustering(arma::umat data, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels, arma::vec fix_vec, arma::vec cluster_weight_priors, arma::uword num_clusters, arma::uword num_iter, arma::uword burn, arma::uword thinning);
+Rcpp::List categorical_clustering(arma::umat data, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels, arma::vec fix_vec, arma::vec cluster_weight_priors, arma::uword num_clusters, arma::uword num_iter, arma::uword burn, arma::uword thinning);
 RcppExport SEXP _BayesicGibbs_categorical_clustering(SEXP dataSEXP, SEXP phi_priorSEXP, SEXP cluster_labelsSEXP, SEXP fix_vecSEXP, SEXP cluster_weight_priorsSEXP, SEXP num_clustersSEXP, SEXP num_iterSEXP, SEXP burnSEXP, SEXP thinningSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
