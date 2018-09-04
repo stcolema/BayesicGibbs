@@ -289,30 +289,6 @@ arma::field<arma::cube> mean_variance_sampling(arma::mat data,
   return mean_variance_field;
 }
 
-// Normalise continuous data
-arma::mat normalise_data(arma::mat data,
-                         arma::uword num_cols,
-                         bool gaussian = true){
-  
-  arma::rowvec mean_vec(num_cols);
-  arma::rowvec sd_vec(num_cols);
-  
-  // std::cout << "Vectors for nomalising declared\n";
-  
-  // std::cout << "Mean of data:\n" << arma::mean(data, 0) << "\n";
-  
-  // std::cout << "\nSD of data:\n" << arma::stddev(data, 0) << "\n";
-  
-  if(gaussian){
-    mean_vec = arma::mean(data, 0);
-    sd_vec = arma::stddev(data, 0);
-    
-    // std::cout << "values assigned, now normalising:\n";
-    
-    data = (data - mean_vec) / sd_vec;
-  }
-  return data;
-}
 // === Dirichlet ===============================================================
 
 // update the concentration parameter in the Dirichlet distribution
