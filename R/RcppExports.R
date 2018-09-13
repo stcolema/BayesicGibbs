@@ -17,6 +17,22 @@ cat_counter <- function(data) {
     .Call(`_BayesicGibbs_cat_counter`, data)
 }
 
+declare_class_probs_field <- function(cat_count, num_cols, num_clusters) {
+    .Call(`_BayesicGibbs_declare_class_probs_field`, cat_count, num_cols, num_clusters)
+}
+
+sample_class_probabilities <- function(data, class_probabilities, phi_prior, cluster_labels, cat_count, num_clusters, num_cols) {
+    .Call(`_BayesicGibbs_sample_class_probabilities`, data, class_probabilities, phi_prior, cluster_labels, cat_count, num_clusters, num_cols)
+}
+
+categorical_cluster_probabilities <- function(point, data, class_probabilities, cluster_weights, num_clusters, num_cols) {
+    .Call(`_BayesicGibbs_categorical_cluster_probabilities`, point, data, class_probabilities, cluster_weights, num_clusters, num_cols)
+}
+
+cluster_predictor <- function(probabilities) {
+    .Call(`_BayesicGibbs_cluster_predictor`, probabilities)
+}
+
 categorical_clustering <- function(data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning) {
     .Call(`_BayesicGibbs_categorical_clustering`, data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning)
 }

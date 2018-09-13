@@ -52,6 +52,63 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// declare_class_probs_field
+arma::field<arma::mat> declare_class_probs_field(arma::uvec cat_count, arma::uword num_cols, arma::uword num_clusters);
+RcppExport SEXP _BayesicGibbs_declare_class_probs_field(SEXP cat_countSEXP, SEXP num_colsSEXP, SEXP num_clustersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::uvec >::type cat_count(cat_countSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_cols(num_colsSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_clusters(num_clustersSEXP);
+    rcpp_result_gen = Rcpp::wrap(declare_class_probs_field(cat_count, num_cols, num_clusters));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sample_class_probabilities
+arma::field<arma::mat> sample_class_probabilities(arma::umat data, arma::field<arma::mat> class_probabilities, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels, arma::uvec cat_count, arma::uword num_clusters, arma::uword num_cols);
+RcppExport SEXP _BayesicGibbs_sample_class_probabilities(SEXP dataSEXP, SEXP class_probabilitiesSEXP, SEXP phi_priorSEXP, SEXP cluster_labelsSEXP, SEXP cat_countSEXP, SEXP num_clustersSEXP, SEXP num_colsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::umat >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< arma::field<arma::mat> >::type class_probabilities(class_probabilitiesSEXP);
+    Rcpp::traits::input_parameter< arma::field<arma::vec> >::type phi_prior(phi_priorSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type cluster_labels(cluster_labelsSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type cat_count(cat_countSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_clusters(num_clustersSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_cols(num_colsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_class_probabilities(data, class_probabilities, phi_prior, cluster_labels, cat_count, num_clusters, num_cols));
+    return rcpp_result_gen;
+END_RCPP
+}
+// categorical_cluster_probabilities
+arma::vec categorical_cluster_probabilities(arma::urowvec point, arma::umat data, arma::field<arma::mat> class_probabilities, arma::vec cluster_weights, arma::uword num_clusters, arma::uword num_cols);
+RcppExport SEXP _BayesicGibbs_categorical_cluster_probabilities(SEXP pointSEXP, SEXP dataSEXP, SEXP class_probabilitiesSEXP, SEXP cluster_weightsSEXP, SEXP num_clustersSEXP, SEXP num_colsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::urowvec >::type point(pointSEXP);
+    Rcpp::traits::input_parameter< arma::umat >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< arma::field<arma::mat> >::type class_probabilities(class_probabilitiesSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type cluster_weights(cluster_weightsSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_clusters(num_clustersSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type num_cols(num_colsSEXP);
+    rcpp_result_gen = Rcpp::wrap(categorical_cluster_probabilities(point, data, class_probabilities, cluster_weights, num_clusters, num_cols));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cluster_predictor
+arma::uword cluster_predictor(arma::vec probabilities);
+RcppExport SEXP _BayesicGibbs_cluster_predictor(SEXP probabilitiesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type probabilities(probabilitiesSEXP);
+    rcpp_result_gen = Rcpp::wrap(cluster_predictor(probabilities));
+    return rcpp_result_gen;
+END_RCPP
+}
 // categorical_clustering
 Rcpp::List categorical_clustering(arma::umat data, arma::field<arma::vec> phi_prior, arma::uvec cluster_labels, arma::vec fix_vec, arma::vec cluster_weight_priors, arma::uword num_clusters, arma::uword num_iter, arma::uword burn, arma::uword thinning);
 RcppExport SEXP _BayesicGibbs_categorical_clustering(SEXP dataSEXP, SEXP phi_priorSEXP, SEXP cluster_labelsSEXP, SEXP fix_vecSEXP, SEXP cluster_weight_priorsSEXP, SEXP num_clustersSEXP, SEXP num_iterSEXP, SEXP burnSEXP, SEXP thinningSEXP) {
@@ -177,6 +234,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_BayesicGibbs_entropy", (DL_FUNC) &_BayesicGibbs_entropy, 1},
     {"_BayesicGibbs_dirichlet_posterior", (DL_FUNC) &_BayesicGibbs_dirichlet_posterior, 3},
     {"_BayesicGibbs_cat_counter", (DL_FUNC) &_BayesicGibbs_cat_counter, 1},
+    {"_BayesicGibbs_declare_class_probs_field", (DL_FUNC) &_BayesicGibbs_declare_class_probs_field, 3},
+    {"_BayesicGibbs_sample_class_probabilities", (DL_FUNC) &_BayesicGibbs_sample_class_probabilities, 7},
+    {"_BayesicGibbs_categorical_cluster_probabilities", (DL_FUNC) &_BayesicGibbs_categorical_cluster_probabilities, 6},
+    {"_BayesicGibbs_cluster_predictor", (DL_FUNC) &_BayesicGibbs_cluster_predictor, 1},
     {"_BayesicGibbs_categorical_clustering", (DL_FUNC) &_BayesicGibbs_categorical_clustering, 9},
     {"_BayesicGibbs_gaussian_clustering", (DL_FUNC) &_BayesicGibbs_gaussian_clustering, 16},
     {"_BayesicGibbs_mdi", (DL_FUNC) &_BayesicGibbs_mdi, 21},

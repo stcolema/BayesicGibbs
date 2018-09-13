@@ -296,19 +296,20 @@ arma::vec concentration_n(arma::vec concentration_0,
                           arma::uvec cluster_labels,
                           arma::uword num_cat){
   
-  arma::uword n = cluster_labels.n_elem;
-  
+  // arma::uword n = cluster_labels.n_elem;
+  arma::uvec class_members;
   arma::uword class_count;
   arma::vec concentration(num_cat);
   
   for (arma::uword i = 1; i < num_cat + 1; i++) {
     class_count = 0;
-    
-    for (arma::uword j = 0; j < n; j++ ) {
-      if (cluster_labels(j) == i) {
-        class_count++;
-      }
-    }
+    class_members = find(cluster_labels == i);
+    class_count = class_members.n_elem;
+    // for (arma::uword j = 0; j < n; j++ ) {
+    //   if (cluster_labels(j) == i) {
+    //     class_count++;
+    //   }
+    // }
     
     concentration(i - 1) = arma::as_scalar(concentration_0(i - 1)) + class_count;
   }
@@ -328,9 +329,60 @@ arma::vec dirichlet_posterior(arma::vec concentration_0,
                                   num_clusters);
   
   
-  for (arma::uword i = 1; i < num_clusters + 1; i++) {
+  for (arma::uword i = 0; i < num_clusters; i++) {
     
-    cluster_weight(i - 1) = Rf_rgamma(arma::as_scalar(concentration(i - 1)), 1);
+    cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
+    
+  }
+  
+  double total_cluster_weight = sum(cluster_weight);
+  cluster_weight = cluster_weight / total_cluster_weight;
+  return cluster_weight;
+}
+
+//  TEST FUNCTIONS FOR CLASSES WITH NULL OF 0 //////////////////////////////////
+
+arma::vec concentration_n_class(arma::vec concentration_0,
+                          arma::uvec cluster_labels,
+                          arma::uword num_cat){
+  
+  // arma::uword n = cluster_labels.n_elem;
+  
+  arma::uword class_count = 0;
+  arma::vec concentration(num_cat);
+  
+  arma::uvec class_members;
+  
+  for (arma::uword i = 0; i < num_cat; i++) {
+    // class_count = 0;
+    class_members = find(cluster_labels == i);
+    class_count = class_members.n_elem;
+    // for (arma::uword j = 0; j < n; j++ ) {
+    //   if (cluster_labels(j) == i) {
+    //     class_count++;
+    //   }
+    // }
+    
+    concentration(i) = arma::as_scalar(concentration_0(i)) + class_count;
+  }
+  return concentration;
+}
+
+
+arma::vec dirichlet_posterior_class(arma::vec concentration_0,
+                                    arma::uvec cluster_labels,
+                                    arma::uword num_clusters){
+  arma::vec cluster_weight = arma::zeros<arma::vec>(num_clusters);
+  
+  arma::vec concentration(num_clusters);
+  concentration = concentration_n_class(concentration_0,
+                                        cluster_labels,
+                                        num_clusters);
+  
+  
+  for (arma::uword i = 0; i < num_clusters; i++) {
+    
+    cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
     
   }
   
@@ -362,6 +414,7 @@ arma::uvec cat_counter(arma::umat data){
 
 // find the number of categories in each covariate and declare the appropriate
 // matrix to record the associated probabilties for each cluster
+// [[Rcpp::export]]
 arma::field<arma::mat> declare_class_probs_field(arma::uvec cat_count,
                                                  arma::uword num_cols,
                                                  arma::uword num_clusters){
@@ -376,7 +429,9 @@ arma::field<arma::mat> declare_class_probs_field(arma::uvec cat_count,
 }
 
 // Sample the probabilities for each category across all clusters for each covariate
-arma::field<arma::mat> sample_class_probabilities(arma::field<arma::mat> class_probabilities,
+// [[Rcpp::export]]
+arma::field<arma::mat> sample_class_probabilities(arma::umat data,
+                                                  arma::field<arma::mat> class_probabilities,
                                                   arma::field<arma::vec> phi_prior,
                                                   arma::uvec cluster_labels,
                                                   arma::uvec cat_count,
@@ -384,19 +439,37 @@ arma::field<arma::mat> sample_class_probabilities(arma::field<arma::mat> class_p
                                                   arma::uword num_cols
 ){
 
-  for(arma::uword j = 0; j < num_cols; j++){
-    for(arma::uword k = 0; k < num_clusters; k++){
-      class_probabilities(j).row(k) = arma::trans(dirichlet_posterior(phi_prior(j),
-                                                                      cluster_labels,
-                                                                      cat_count(j)
-                                                                      )
+  arma::umat cluster_data;
+  // arma::umat indices;
+  for(arma::uword k = 1; k < num_clusters + 1; k++){
+    
+    // std::cout << "In for loop, k = " << k << "\n";
+    
+    // indices = find(cluster_labels == k);
+    
+    // std::cout << "\n" << indices << "\n";
+    
+    cluster_data = data.rows(find(cluster_labels == k));
+    
+    // std::cout << "Generic message\n";
+    
+    for(arma::uword j = 0; j < num_cols; j++){
+      
+      
+      class_probabilities(j).row(k - 1) = arma::trans(dirichlet_posterior_class(phi_prior(j),
+                                                                            cluster_data.col(j),
+                                                                            cat_count(j)
+                                                                            )
       );
+      
+      // std::cout << "Another message\n";
     }
   }
   return class_probabilities;
 }
 
 // Sample the cluster membership of point
+// [[Rcpp::export]]
 arma::vec categorical_cluster_probabilities(arma::urowvec point,
                                             arma::umat data,
                                             arma::field<arma::mat> class_probabilities,
@@ -426,12 +499,14 @@ arma::vec categorical_cluster_probabilities(arma::urowvec point,
 
 // Predicts the cluster assignments based on a vector of probabilities using
 // the rejection method
+// [[Rcpp::export]]
 arma::uword cluster_predictor(arma::vec probabilities){
   double u;
   arma::uword pred;
   u = arma::randu<double>( );
   
-  pred = 1 + sum(u > cumsum(probabilities));
+  // include + 1 if labels centred on 1
+  pred = 1 + sum(u > cumsum(probabilities)); // 1 + 
   return pred;
 }
 
@@ -485,7 +560,8 @@ Rcpp::List categorical_clustering(arma::umat data,
     
     // std::cout << "Cluster weights calculated\n";
     
-    class_probabilities = sample_class_probabilities(class_probabilities,
+    class_probabilities = sample_class_probabilities(data,
+                                                     class_probabilities,
                                                      phi_prior,
                                                      cluster_labels,
                                                      cat_count,
@@ -1335,7 +1411,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
     // std::cout << "Variance sampled\n";
     
     // For the categorical data, sample the probabilities for each class
-    class_probabilities = sample_class_probabilities(class_probabilities,
+    class_probabilities = sample_class_probabilities(categorical_data,
+                                                     class_probabilities,
                                                      phi_prior,
                                                      cluster_labels_categorical,
                                                      cat_count,
@@ -1456,9 +1533,49 @@ Rcpp::List mdi(arma::mat gaussian_data,
   // std::cout << "Context similarity: " << context_similarity << "\n";
   
   return List::create(Named("similarity") = sim,
-                      Named("Categorical_similarity") = cat_sim,
+                      Named("categorical_similarity") = cat_sim,
                       Named("class_record") = gaussian_record,
                       Named("entropy") = entropy_cw);
   
   // return sim;  
 }
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// MDI for different types
+
+///////////////////////////////////////////////////////////////////////////////
+
+// void mdi_flex(arma::mat data_1,
+//               arma::umat data_2,
+//               arma::vec mu_0_1,
+//               double lambda_0_1,
+//               arma::mat scale_0_1,
+//               int df_0_1,
+//               arma::vec mu_0_2,
+//               double lambda_0_2,
+//               arma::mat scale_0_2,
+//               int df_0_2,
+//               arma::vec clust_weight_0_1,
+//               arma::vec clust_weight_0_2,
+//               arma::uvec cluster_labels_1,
+//               arma::uvec cluster_labels_2,
+//               arma::uword num_clusters_1,
+//               std::vector<bool> fix_vec_1,
+//               std::vector<bool> fix_vec_2,
+//               arma::uword num_iter,
+//               arma::uword burn,
+//               arma::uword thinning,
+//               bool outlier = false,
+//               double t_df = 4.0,
+//               bool record_posteriors = false,
+//               bool normalise_1 = false
+//                 
+// )
+
+
+

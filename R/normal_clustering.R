@@ -1,6 +1,22 @@
 #!/usr/bin/env Rscript
 
 # === Functions ================================================================
+#' @title Prepare cat data
+#' @description Converts categorical data to numerical format appropriate for 
+#' analysis (i.e. integers with a null class of 0)
+#' 
+#' @param data  A data frame or matrix of categorical data
+#' @return A matrix of integers where the lowest class fval
+prepare_cat_data <- function(data){
+  
+  data <- data %>%
+    apply(2, as.factor) %>%
+    apply(2, as.numeric)
+  
+  data
+}
+
+
 
 # --- MCMC analysis ------------------------------------------------------------
 #' @title entropy_window
