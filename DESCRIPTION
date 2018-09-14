@@ -30,4 +30,4 @@ Suggests:
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.0
 Encoding: UTF-8
-Language: en-US
+Language: en-UK

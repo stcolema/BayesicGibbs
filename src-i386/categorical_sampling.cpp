@@ -852,7 +852,7 @@ arma::uword count_common_cluster(arma::uvec cluster_labels_gaussian,
 
 // samples a gamma distn for the current iterations context similarity parameter
 // (phi in the original 2012 paper).
-double compare_context_similarity(arma::uvec cluster_labels_gaussian,
+double wrong_compare_context_similarity(arma::uvec cluster_labels_gaussian,
                                   arma::uvec cluster_labels_categorical,
                                   // arma::field<arma::vec> cluster_weights,
                                   arma::vec cluster_weights_gaussian,
@@ -883,6 +883,132 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
   double phi_12 = Rf_rgamma(count_same_cluster + 1, b);
   return phi_12;
 }
+
+double b_n(double v,
+           arma::uword min_num_clusters,
+           arma::vec cluster_weights_gaussian,
+           arma::vec cluster_weights_categorical){
+  // declare the rate
+  double b = 0.0;
+  
+  // the rate is proportional to the sum of the product of cluster weights 
+  // across contexts (i.e. the product of cluster_weight_i in context 1 times
+  // cluster_weight_i in context 2)
+  for(arma::uword i = 0; i < min_num_clusters; i++){
+    b = b + cluster_weights_gaussian(i) * cluster_weights_categorical(i);
+  }
+  
+  // the rate is equal to this sum times the strategic latent variable, v
+  b = v * b;
+  
+  return b;
+}
+
+int factorial(arma::uword n)
+{
+  if(n <= 1){
+    return 1;
+  }
+  return n * factorial(n - 1);
+  
+  // return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
+}
+
+double log_factorial(arma::uword n){
+  if(n <= 1){
+    return 0;
+  }
+  return log(n) + log_factorial(n - 1);
+}
+
+// samples a gamma distn for the current iterations context similarity parameter
+// (phi in the original 2012 paper).
+double compare_context_similarity(arma::uvec cluster_labels_gaussian,
+                                  arma::uvec cluster_labels_categorical,
+                                  arma::vec cluster_weights_gaussian,
+                                  arma::vec cluster_weights_categorical,
+                                  double v,
+                                  arma::uword n,
+                                  arma::uword min_num_clusters,
+                                  double a0,
+                                  double b0){
+  
+  // calculate the shape of the relevant gamma function
+  arma::uword count_same_cluster = count_common_cluster(cluster_labels_gaussian,
+                                                        cluster_labels_categorical,
+                                                        n);
+  
+  arma::vec prob_vec(count_same_cluster);
+  
+  // calculate the rate
+  double b = b_n(v,
+                 min_num_clusters,
+                 cluster_weights_gaussian,
+                 cluster_weights_categorical) + b0;
+  
+  double phi_12 = 0;
+
+  // context similarity is a weighted sum of gammas
+  if(count_same_cluster > 0){
+    
+    // std::cout << count_same_cluster << "\n";
+    
+    for(arma::uword i = 0; i < count_same_cluster; i++){
+      prob_vec(i) = log_factorial(count_same_cluster)
+      - log_factorial(i)
+      - log_factorial(count_same_cluster - i)
+      + log_factorial(i + a0 - 1)
+      - (i + a0)*log(b)
+      + log(Rf_rgamma(i + a0, b));
+    }
+    
+    // std::cout << "\nComponents of prob vec sum:" << "\n";
+    // std::cout << log_factorial(count_same_cluster) << "\n" << log_factorial(0) << "\n";
+    // std::cout << log_factorial(a0 - 1)  << "\n" << (a0)*log(b) << "\n";
+    // std::cout << log(Rf_rgamma(a0, b)) << "\n";
+    
+    
+    // std::cout << "Prob vec for phi before exp:\n" << prob_vec << "\n\n";
+    
+    prob_vec = exp(prob_vec - max(prob_vec));
+    prob_vec = prob_vec / sum(prob_vec);
+  
+    
+    // If move to general null value of 0 can use the prediction function
+    double u;
+    u = arma::randu<double>( );
+    
+    // include + 1 if labels centred on 1
+    arma::uword pred_ind = 0;
+    
+    pred_ind = sum(u > cumsum(prob_vec)); // 1 + 
+    
+    // std::cout << "Use the " << pred_ind << " value of the weighted sum of gammas\n";
+    // std::cout << prob_vec << "\n\n";
+    // std::cout << prob_vec(pred_ind) << "\n";
+    
+  
+    phi_12 = prob_vec(pred_ind);
+    
+    // std::cout << "Assigned phi\n";
+  }
+  
+  return phi_12;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Calculates the normalising constant for the posterior
 double calculate_normalising_constant(arma::vec cluster_weights_gaussian,
@@ -1088,7 +1214,9 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
                                double context_similarity,
                                arma::uword min_num_clusters,
                                double v,
-                               arma::uword n){
+                               arma::uword n,
+                               double a0,
+                               double b0){
   
   arma::uword new_pos = 0;
   
@@ -1137,7 +1265,9 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
                                                         new_weights,
                                                         v,
                                                         n,
-                                                        min_num_clusters);
+                                                        min_num_clusters,
+                                                        a0,
+                                                        b0);
     
     
     // Compare new and old context similarities if swap occurs
@@ -1263,6 +1393,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
                double lambda_0,
                arma::mat scale_0,
                int df_0,
+               double a0,
+               double b0,
                arma::vec cluster_weight_priors_gaussian,
                arma::vec cluster_weight_priors_categorical,
                arma::field<arma::vec> phi_prior,
@@ -1344,7 +1476,7 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                                   num_cols_cat,
                                                   num_clusters_categorical);
   
-  double context_similarity = 0.0;
+  double context_similarity = Rf_rgamma(a0, b0);
   
   double Z = calculate_normalising_constant(cluster_weights_gaussian,
                                             cluster_weights_categorical,
@@ -1421,6 +1553,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                                      num_clusters_categorical,
                                                      num_cols_cat);
     
+    // std::cout << "Sampled class probabilities for categorical data\n";
+    
     // sample the context similarity parameter (as only two contexts this is a
     // single double - number not a drink)
     context_similarity = compare_context_similarity(cluster_labels_gaussian,
@@ -1429,9 +1563,11 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                                     cluster_weights_categorical,
                                                     v,
                                                     n,
-                                                    min_num_clusters);
+                                                    min_num_clusters,
+                                                    a0,
+                                                    b0);
     
-    // std::cout << "Sampled phi \n";
+    // std::cout << "Sampled phi\n";
     
     // Calculate the current normalising constant (consider being more clever 
     // about this) 
@@ -1503,7 +1639,9 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                               context_similarity,
                                               min_num_clusters,
                                               v,
-                                              n);
+                                              n,
+                                              a0,
+                                              b0);
     
     // Separate the output into the relevant components
     
@@ -1515,6 +1653,7 @@ Rcpp::List mdi(arma::mat gaussian_data,
     cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
     
     // std::cout <<"cluster weights updated \n";
+    // std::cout <<"\nContext similarity before checking label swapping:\n" << context_similarity << "\n\n";
     
     context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
     // std::cout <<"phi updated \n";
@@ -1537,7 +1676,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
   
   return List::create(Named("similarity") = sim,
                       Named("categorical_similarity") = cat_sim,
-                      Named("class_record") = gaussian_record,
+                      Named("gaussian_class_record") = gaussian_record,
+                      Named("categorical_class_record") = categorical_record,
                       Named("context_similarity") = context_similarity_record,
                       Named("entropy") = entropy_cw);
   

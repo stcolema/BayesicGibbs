@@ -10,10 +10,12 @@
 prepare_cat_data <- function(data){
   
   data <- data %>%
-    apply(2, as.factor) %>%
-    apply(2, as.numeric)
-  
-  data
+    as.data.frame %>% 
+    lapply(as.character) %>%
+    lapply(as.factor) %>%
+    lapply(as.numeric) %>% 
+    do.call(rbind, .) %>%
+    '-'(1)
 }
 
 
@@ -153,6 +155,8 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
                            scale_0 = NULL,
                            lambda_0 = 0.01,
                            concentration_0 = 0.1,
+                           a0 = 1,
+                           b0 = 1,
                            cat_data = NULL,
                            cluster_weight_priors_categorical = 1,
                            phi_0 = NULL,
@@ -267,6 +271,8 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
       lambda_0,
       scale_0,
       df_0,
+      a0,
+      b0,
       concentration_0,
       cluster_weight_priors_categorical,
       phi_0,
@@ -443,10 +449,12 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
                                scale_0 = NULL,
                                lambda_0 = 0.01,
                                concentration_0 = 0.1,
+                               a0 = 1,
+                               b0 = 1,
                                cluster_weight_priors_categorical = 1,
                                phi_0 = NULL,
                                c_clusters_label_0 = NULL,
-                               num_clusters_cat = 100,
+                               num_clusters_cat = NULL,
                                thinning = 25,
                                outlier = FALSE,
                                t_df = 4.0,
@@ -484,6 +492,10 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
         "\nSome samples recorded. Continuing but please check input"
       ))
     }
+  }
+  
+  if (is.null(num_clusters_cat)) {
+    num_clusters_cat <- min(100, ceiling(nrow(data) / 4))
   }
 
   data <- as.matrix(data)
@@ -526,7 +538,7 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
       prob = cluster_weight_priors_categorical
     )
   }
-
+  
   sim <- mdi(
     data,
     cat_data,
@@ -534,6 +546,8 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
     lambda_0,
     scale_0,
     df_0,
+    a0,
+    b0,
     concentration_0,
     cluster_weight_priors_categorical,
     phi_0,
