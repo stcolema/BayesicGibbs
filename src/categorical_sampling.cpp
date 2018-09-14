@@ -1365,6 +1365,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
   arma::umat categorical_record(n, eff_count);
   categorical_record.zeros();
   
+  arma::vec context_similarity_record(eff_count);
+  
   arma::vec labels_weights_phi(n + num_clusters_categorical + 1);
   
   arma::vec entropy_cw(num_iter);
@@ -1521,6 +1523,7 @@ Rcpp::List mdi(arma::mat gaussian_data,
     if (i >= burn && (i - burn) % thinning == 0) {
       gaussian_record.col((i - burn) / thinning) = cluster_labels_gaussian;
       categorical_record.col((i - burn) / thinning) = cluster_labels_categorical;
+      context_similarity_record((i - burn) / thinning) = context_similarity;
     }
   }
   
@@ -1535,6 +1538,7 @@ Rcpp::List mdi(arma::mat gaussian_data,
   return List::create(Named("similarity") = sim,
                       Named("categorical_similarity") = cat_sim,
                       Named("class_record") = gaussian_record,
+                      Named("context_similarity") = context_similarity_record,
                       Named("entropy") = entropy_cw);
   
   // return sim;  

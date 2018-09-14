@@ -11,7 +11,7 @@ Authors@R: c(
   )
 Description: Tools for clustering categorical and normal data using priors of 
     the Dirichlet and the Normal Inverse Wishart respectively.
-License: GPL (>= 2)
+License: MIT + file LICENSE
 Imports: 
     Rcpp (>= 0.12.18),
     ggplot2,
@@ -22,7 +22,12 @@ Imports:
     reshape,
     mcclust,
     pRoloc
-Suggests:pRolocData
+Suggests: 
+    pRolocData,
+    testthat,
+    covr,
+    spelling
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.0
 Encoding: UTF-8
+Language: en-US
