@@ -1231,71 +1231,102 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
   double log_accept = 0.0;
   double accept = 0.0;
   
-  for(arma::uword i = 0; i < min_num_clusters; i++){
+  // Should this be bound as the min_num_clusters or min_num_clusters - 1?
+  for(arma::uword i = 0; i < num_clusters_categorical; i++){
     
     // Generate a new position not equal to i
     // multiply a random number from [0,1] by the upper bound of i less 1
     // this less 1 is used so that if we equal i we can add 1 and treat all
     // cases similarly (otherwise we would be biasing the result towards i + 1)
-    new_pos = ceil(arma::randu<double>( ) * (min_num_clusters - 1));
+    // Should it be "- 2" rather than "- 1"? Due to C++'s method of accessing
+    // elements and the +1 to avoid selecting the same position as i, I think we
+    // need to use "- 2".
+    new_pos = ceil(arma::randu<double>( ) * (num_clusters_categorical - 2));
     
     if(new_pos >= i){
       new_pos++;
     }
     
-    // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
-    // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
-    // 
-    // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
-    // cluster_labels_categorical.elem(label_2_ind).fill(i);
-    
-    // std::cout << "Swapping labels\n";
-    
-    new_labels = swap_labels(cluster_labels_categorical, i, new_pos);
-    
-    // std::cout << "Swapping weights\n";
-    
-    new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
-    
-    // std::cout << "Calculating new phi\n";
-    
-    new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
-                                                        new_labels,
-                                                        cluster_weights_gaussian,
-                                                        new_weights,
-                                                        v,
-                                                        n,
-                                                        min_num_clusters,
-                                                        a0,
-                                                        b0);
-    
-    
-    // Compare new and old context similarities if swap occurs
-    log_old_similarity = std::log(context_similarity + 1);
-    log_new_similarity = std::log(new_context_similarity + 1);
-    
-    log_accept = log_new_similarity - log_old_similarity;
-    
-    // rejection sampling
-    accept = 1;
-    
-    if(log_accept < 0){
-      accept = exp(log_accept);
-    }
-    
-    // if swap accepted update labels, weights and similarity parameter
-    if(arma::randu<double>( ) < accept){
+    if(new_pos < min_num_clusters || i < min_num_clusters){
+        
       
-      // std::cout << "Accept and assign updates\n";
+      // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
+      // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
+      // 
+      // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
+      // cluster_labels_categorical.elem(label_2_ind).fill(i);
       
-      // std::cout << "Labels\n";
-      cluster_labels_categorical = new_labels;
+      // std::cout << "Swapping labels\n";
       
-      // std::cout << "Weights\n";
-      cluster_weights_categorical = new_weights;
+      // +1 as cluster labels are on a 1:n scale whereas C++ is 0:(n-1)
+      new_labels = swap_labels(cluster_labels_categorical, i + 1, new_pos + 1);
       
-      // std::cout << "Phi\n\n";
-      context_similarity = new_context_similarity;
+      // std::cout << "\n=== LABELS ===============================================\n";
+      // std::cout << "Current labels:" << cluster_labels_categorical << "\n\n";
+      // std::cout << "Proposed new labels:" << new_labels << "\n\n";
+      
+      // std::cout << "Swapping weights\n";
+      
+      new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
+      
+      // std::cout << "\n=== WEIGHTS ==============================================\n";
+      // std::cout << "Current weights:\n" << cluster_weights_categorical << "\n\n";
+      // std::cout << "Proposed new weights:\n" << new_weights << "\n\n";
+      
+      
+      // std::cout << "Calculating new phi\n";
+      
+      new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
+                                                          new_labels,
+                                                          cluster_weights_gaussian,
+                                                          new_weights,
+                                                          v,
+                                                          n,
+                                                          min_num_clusters,
+                                                          a0,
+                                                          b0);
+      
+      // if(new_context_similarity != 0 
+      //      || (new_context_similarity == 0 && context_similarity == 0)){
+      // Compare new and old context similarities if swap occurs
+      
+      log_old_similarity = std::log(context_similarity + 1);
+      log_new_similarity = std::log(new_context_similarity + 1);
+      
+      log_accept = log_new_similarity - log_old_similarity;
+      
+      // accept = exp(log_accept);
+      // accept = accept / (context_similarity + new_context_similarity + 2);
+      
+      
+      // std::cout << "i = " << i << "\n";
+      // std::cout << log_accept << "\n";
+      // std::cout << log_new_similarity << "\n";
+      // std::cout << log_old_similarity << "\n\n";
+      
+      // rejection sampling
+      accept = 1;
+      
+      if(log_accept < 0){
+        accept = exp(log_accept);
+      }
+      
+      // if swap accepted update labels, weights and similarity parameter
+      if(arma::randu<double>( ) < accept){
+        
+        // std::cout << "Accept and assign updates\n";
+        
+        // std::cout << "Labels\n";
+        cluster_labels_categorical = new_labels;
+        
+        // std::cout << "Weights\n";
+        cluster_weights_categorical = new_weights;
+        
+        // std::cout << "Phi\n\n";
+        context_similarity = new_context_similarity;
+        
+      }
+      // }
       
     }
   }
