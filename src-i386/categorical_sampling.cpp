@@ -946,8 +946,11 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
                  cluster_weights_gaussian,
                  cluster_weights_categorical) + b0;
   
-  double phi_12 = 0;
-
+  double phi_12 = 0.0;
+  
+  // double Z_phi = 0.0;
+  // double Z_phi_comp = 0.0;
+  
   // context similarity is a weighted sum of gammas
   if(count_same_cluster > 0){
     
@@ -958,8 +961,23 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
       - log_factorial(i)
       - log_factorial(count_same_cluster - i)
       + log_factorial(i + a0 - 1)
-      - (i + a0)*log(b)
-      + log(Rf_rgamma(i + a0, b));
+      - (i + a0)*log(b);
+      // + log(Rf_rgamma(i + a0, b));
+      
+      // std::cout << i << "\n" << prob_vec(i) << "\n";
+      // std::cout << log_factorial(i) << "\n" << (i + a0)*log(b) << "\n";
+      // std::cout << log(Rf_rgamma(i + a0, b)) << "\n";
+      // std::cout << b << "\n" << log(b) << "\n";
+      // // std::cout << i << "\n" << prob_vec(i) << "\n";
+      // 
+      // 
+      // Z_phi_comp = log_factorial(count_same_cluster)
+      //   - log_factorial(i)
+      //   - log_factorial(count_same_cluster - i)
+      //   + log_factorial(i + a0 - 1)
+      //   - (i + a0)*log(b);
+      //   
+      // Z_phi = Z_phi + exp(Z_phi_comp);
     }
     
     // std::cout << "\nComponents of prob vec sum:" << "\n";
@@ -970,28 +988,37 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
     
     // std::cout << "Prob vec for phi before exp:\n" << prob_vec << "\n\n";
     
+    
     prob_vec = exp(prob_vec - max(prob_vec));
     prob_vec = prob_vec / sum(prob_vec);
   
-    
     // If move to general null value of 0 can use the prediction function
     double u;
     u = arma::randu<double>( );
     
     // include + 1 if labels centred on 1
     arma::uword pred_ind = 0;
-    
-    pred_ind = sum(u > cumsum(prob_vec)); // 1 + 
+
+    pred_ind = sum(u > cumsum(prob_vec)); // 1 +
     
     // std::cout << "Use the " << pred_ind << " value of the weighted sum of gammas\n";
     // std::cout << prob_vec << "\n\n";
     // std::cout << prob_vec(pred_ind) << "\n";
     
+    // std::cout << "Phi selected:\n";
+    // std::cout << pred_ind << "\n";
+    // std::cout << count_same_cluster << "\n\n";
   
-    phi_12 = prob_vec(pred_ind);
+    // phi_12 = Rf_rgamma(pred_ind + a0, b);
+    phi_12 = Rf_rgamma(count_same_cluster + a0, b);
     
     // std::cout << "Assigned phi\n";
   }
+  // 
+  // std::cout << "\nNormalising constant:\n" << Z_phi << "\n";
+  // std::cout << "Weighted sum of gammas:\n" << sum(exp(prob_vec)) << "\n";
+  // 
+  // phi_12 = (1/Z_phi) * sum(exp(prob_vec));
   
   return phi_12;
 }
@@ -1241,7 +1268,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
     // Should it be "- 2" rather than "- 1"? Due to C++'s method of accessing
     // elements and the +1 to avoid selecting the same position as i, I think we
     // need to use "- 2".
-    new_pos = ceil(arma::randu<double>( ) * (num_clusters_categorical - 2));
+    new_pos = floor(arma::randu<double>( ) * (num_clusters_categorical - (1+1e-12)));
     
     if(new_pos >= i){
       new_pos++;
@@ -1295,8 +1322,29 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
       
       log_accept = log_new_similarity - log_old_similarity;
       
-      // accept = exp(log_accept);
-      // accept = accept / (context_similarity + new_context_similarity + 2);
+      // accept = exp(log_accept)/(context_similarity + new_context_similarity + 2);
+      
+      // arma::vec prob_vec(2);
+      // prob_vec(0) = log_old_similarity;
+      // prob_vec(1) = log_new_similarity;
+      // prob_vec = exp(prob_vec - max(prob_vec));
+      // prob_vec = prob_vec/sum(prob_vec);
+      // 
+      // double u;
+      // u = arma::randu<double>( );
+      
+      // include + 1 if labels centred on 1
+      // arma::uword pred_ind = 0;
+      // 
+      // pred_ind = sum(u > cumsum(prob_vec)); // 1 +
+      
+      
+      
+      accept = 1.0;
+
+      if(log_accept < 0){
+        accept = exp(log_accept);
+      }
       
       
       // std::cout << "i = " << i << "\n";
@@ -1305,14 +1353,21 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
       // std::cout << log_old_similarity << "\n\n";
       
       // rejection sampling
-      accept = 1;
-      
-      if(log_accept < 0){
-        accept = exp(log_accept);
-      }
+      // accept = 1;
+      // 
+      // if(log_accept < 0){
+      //   accept = exp(log_accept);
+      // }
       
       // if swap accepted update labels, weights and similarity parameter
+      // if(pred_ind == 1){
       if(arma::randu<double>( ) < accept){
+        
+        // std::cout << i << "\n";
+        // std::cout << new_pos << "\n";
+        // std::cout << accept << "\n";
+        // std::cout << context_similarity << "\n";
+        // std::cout << new_context_similarity << "\n\n";
         
         // std::cout << "Accept and assign updates\n";
         
@@ -1681,13 +1736,19 @@ Rcpp::List mdi(arma::mat gaussian_data,
     
     // std::cout << "cluster labels updated \n";
     
+    // std::cout <<"\nCluster weights before:\n" << cluster_weights_categorical << "\n";
+    
     cluster_weights_categorical = labels_weights_phi.subvec(n, n + num_clusters_categorical - 1);
     
+    // std::cout <<"\nCluster weights after:\n" << cluster_weights_categorical << "\n\n";
+    
     // std::cout <<"cluster weights updated \n";
-    // std::cout <<"\nContext similarity before checking label swapping:\n" << context_similarity << "\n\n";
+    // std::cout <<"\nContext similarity before checking label swapping:\n" << context_similarity << "\n";
     
     context_similarity = arma::as_scalar(labels_weights_phi(n + num_clusters_categorical));
     // std::cout <<"phi updated \n";
+    
+    // std::cout <<"\nContext similarity after label swapping:\n" << context_similarity << "\n\n";
     
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
