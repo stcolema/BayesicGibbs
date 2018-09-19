@@ -331,8 +331,8 @@ arma::vec dirichlet_posterior(arma::vec concentration_0,
   
   for (arma::uword i = 0; i < num_clusters; i++) {
     
-    cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
-    
+    // cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
+    cluster_weight(i) = arma::randg( arma::distr_param(arma::as_scalar(concentration(i)), 1.0) );
   }
   
   double total_cluster_weight = sum(cluster_weight);
@@ -382,8 +382,9 @@ arma::vec dirichlet_posterior_class(arma::vec concentration_0,
   
   for (arma::uword i = 0; i < num_clusters; i++) {
     
-    cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
-    
+    // cluster_weight(i) = Rf_rgamma(arma::as_scalar(concentration(i)), 1);
+    // double a = arma::as_scalar(concentration(i));
+    cluster_weight(i) = arma::randg(arma::distr_param(arma::as_scalar(concentration(i)), 1.0) );
   }
   
   double total_cluster_weight = sum(cluster_weight);
@@ -880,7 +881,8 @@ double wrong_compare_context_similarity(arma::uvec cluster_labels_gaussian,
   b = v * b;
   
   // sample from a gamma distribution using this shape and rate
-  double phi_12 = Rf_rgamma(count_same_cluster + 1, b);
+  // double phi_12 = Rf_rgamma(count_same_cluster + 1, b);
+  double phi_12 = arma::randg( arma::distr_param(count_same_cluster + 1, 1/b) );
   return phi_12;
 }
 
@@ -914,6 +916,8 @@ int factorial(arma::uword n)
   // return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
+
+// Returns the log of the factorial of n
 double log_factorial(arma::uword n){
   if(n <= 1){
     return 0;
@@ -1010,7 +1014,15 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
     // std::cout << count_same_cluster << "\n\n";
   
     // phi_12 = Rf_rgamma(pred_ind + a0, b);
-    phi_12 = Rf_rgamma(count_same_cluster + a0, b);
+    
+    // std::cout << count_same_cluster << "\n";
+    // std::cout << a0 << "\n";
+    // std::cout << b << "\n";
+    // std::cout << b0 << "\n";
+    // std::cout << v << "\n";
+    
+    phi_12 = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
+    // phi_12 = Rf_rgamma(count_same_cluster + a0, b);
     
     // std::cout << "Assigned phi\n";
   }
@@ -1041,13 +1053,14 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
 double calculate_normalising_constant(arma::vec cluster_weights_gaussian,
                                       arma::vec cluster_weights_categorical,
                                       double context_similarity,
-                                      arma::uword min_num_clusters){
+                                      arma::uword num_clusters_gaussian,
+                                      arma::uword num_clusters_categorical){
   double Z = 0.0;
   
-  for(arma::uword i = 0; i < min_num_clusters; i++){
-    for(arma::uword j = 0; j < min_num_clusters; j++){
+  for(arma::uword i = 0; i < num_clusters_gaussian; i++){
+    for(arma::uword j = 0; j < num_clusters_categorical; j++){
       Z = Z + cluster_weights_gaussian(i) * cluster_weights_categorical(j) *
-        (1 + context_similarity * (cluster_weights_gaussian(i) == cluster_weights_categorical(j)));
+        (1 + context_similarity * (i == j));
     }
   }
   return Z;
@@ -1274,7 +1287,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
       new_pos++;
     }
     
-    if(new_pos < min_num_clusters || i < min_num_clusters){
+    // if(new_pos < min_num_clusters || i < min_num_clusters){
         
       
       // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
@@ -1347,7 +1360,8 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
       }
       
       
-      // std::cout << "i = " << i << "\n";
+      // std::cout << "position 1: " << i << "\n";
+      // std::cout << "position 2: " << new_pos << "\n\n";
       // std::cout << log_accept << "\n";
       // std::cout << log_new_similarity << "\n";
       // std::cout << log_old_similarity << "\n\n";
@@ -1380,7 +1394,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
         // std::cout << "Phi\n\n";
         context_similarity = new_context_similarity;
         
-      }
+      // }
       // }
       
     }
@@ -1562,13 +1576,30 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                                   num_cols_cat,
                                                   num_clusters_categorical);
   
-  double context_similarity = Rf_rgamma(a0, b0);
+  // double context_similarity = Rf_rgamma(a0, b0);
   
-  double Z = calculate_normalising_constant(cluster_weights_gaussian,
-                                            cluster_weights_categorical,
-                                            context_similarity,
-                                            min_num_clusters);
+  double context_similarity = arma::randg(arma::distr_param(a0, 1/b0) );
   
+  // cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_gaussian,
+  //                                                cluster_labels_gaussian,
+  //                                                num_clusters_gaussian);
+  // 
+  // cluster_weights_categorical = dirichlet_posterior(cluster_weight_priors_categorical,
+  //                                                   cluster_labels_categorical,
+  //                                                   num_clusters_categorical);
+  
+  
+  // std::cout << cluster_weights_gaussian << "\n\n";
+  // std::cout << cluster_weights_categorical << "\n\n";
+  // std::cout << context_similarity << "\n\n";
+  
+  double Z = 0.0;
+  // calculate_normalising_constant(cluster_weights_gaussian,
+  //                                           cluster_weights_categorical,
+  //                                           context_similarity,
+  //                                           num_clusters_gaussian,
+  //                                           num_clusters_categorical);
+
   arma::vec curr_gaussian_prob_vec(num_clusters_gaussian);
   arma::vec curr_categorical_prob_vec(num_clusters_categorical);
 
@@ -1595,11 +1626,6 @@ Rcpp::List mdi(arma::mat gaussian_data,
     
     
     
-    // sample the strategic latent variable, v
-    v = Rf_rgamma(n, Z);
-    
-    // std::cout << "Sampled v \n";
-    
     // sample cluster weights for the two datasets
     cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_gaussian,
                                                    cluster_labels_gaussian,
@@ -1608,6 +1634,8 @@ Rcpp::List mdi(arma::mat gaussian_data,
     cluster_weights_categorical = dirichlet_posterior(cluster_weight_priors_categorical,
                                                       cluster_labels_categorical,
                                                       num_clusters_categorical);
+    
+    
     
     // Entropy for graphing convergence
     entropy_cw(i) = entropy(cluster_weights_gaussian);
@@ -1660,9 +1688,22 @@ Rcpp::List mdi(arma::mat gaussian_data,
     Z = calculate_normalising_constant(cluster_weights_gaussian,
                                        cluster_weights_categorical,
                                        context_similarity,
-                                       min_num_clusters);
+                                       num_clusters_gaussian,
+                                       num_clusters_categorical);
     
     // std::cout << "Z calculated \n";
+    
+    
+    
+    // sample the strategic latent variable, v
+    // v = Rf_rgamma(n, Z);
+    v = arma::randg( arma::distr_param(n, 1/Z) );
+    
+    // std::cout << Z << "\n";
+    // std::cout << arma::randg( arma::distr_param(n, 1/Z) ) << "\n";
+    // std::cout << arma::randg( arma::distr_param(n, Z) ) << "\n";
+    
+    // std::cout << "Sampled v \n";
     
     // sample 
     for(arma::uword j = 0; j < n; j++){
