@@ -1021,10 +1021,13 @@ double compare_context_similarity(arma::uvec cluster_labels_gaussian,
     // std::cout << b0 << "\n";
     // std::cout << v << "\n";
     
-    phi_12 = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
+    // phi_12 = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
     // phi_12 = Rf_rgamma(count_same_cluster + a0, b);
     
     // std::cout << "Assigned phi\n";
+    
+    phi_12 = arma::randg( arma::distr_param(pred_ind + a0, 1/b) );
+    
   }
   // 
   // std::cout << "\nNormalising constant:\n" << Z_phi << "\n";
@@ -1232,6 +1235,30 @@ arma::vec swap_cluster_weights(arma::vec cluster_weights,
   return cluster_weights;
 }
 
+// log_likelihood of the model
+double log_model_likelihood(double v,
+                            double Z,
+                            arma::uword n,
+                            double context_similarity,
+                            arma::uvec cluster_labels_1,
+                            arma::uvec cluster_labels_2,
+                            arma::vec cluster_weights_1,
+                            arma::vec cluster_weights_2){
+  double score = 0.0;
+  
+  for(arma::uword i = 0; i < n; i++){
+    score += log(1 + context_similarity * (cluster_labels_1(i) == cluster_labels_2(i)))
+             + log(cluster_weights_1(cluster_labels_1(i) - 1)) 
+             + log(cluster_weights_2(cluster_labels_2(i) - 1));
+  }
+  score += (n - 1) * log(v) - v * Z - log_factorial(n - 1);
+  
+  return score;
+}
+  
+
+
+
 //  Have to create a function for label swapping
 // This will involve comparing likelihoods with and without swap and then 
 // a rejection method
@@ -1246,34 +1273,210 @@ arma::vec swap_cluster_weights(arma::vec cluster_weights,
 // to associating with cont_cluster_label(i) and then record swapping of (j) and 
 // (i) in the cluster labels in context 2 and the change in the gamma vector
 
+// arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
+//                                arma::uvec cluster_labels_categorical,
+//                                arma::vec cluster_weights_gaussian,
+//                                arma::vec cluster_weights_categorical,
+//                                arma::uword num_clusters_categorical,
+//                                double context_similarity,
+//                                arma::uword min_num_clusters,
+//                                double v,
+//                                arma::uword n,
+//                                double a0,
+//                                double b0){
+// 
+//   arma::uword new_pos = 0;
+// 
+//   double new_context_similarity = 0.0;
+// 
+//   arma::uvec new_labels(n);
+//   arma::vec new_weights(num_clusters_categorical);
+// 
+//   double log_old_similarity = 0.0;
+//   double log_new_similarity = 0.0;
+// 
+//   double log_accept = 0.0;
+//   double accept = 0.0;
+// 
+//   // Should this be bound as the min_num_clusters or min_num_clusters - 1?
+//   for(arma::uword i = 0; i < num_clusters_categorical; i++){
+// 
+//     // Generate a new position not equal to i
+//     // multiply a random number from [0,1] by the upper bound of i less 1
+//     // this less 1 is used so that if we equal i we can add 1 and treat all
+//     // cases similarly (otherwise we would be biasing the result towards i + 1)
+//     // Should it be "- 2" rather than "- 1"? Due to C++'s method of accessing
+//     // elements and the +1 to avoid selecting the same position as i, I think we
+//     // need to use "- 2".
+//     new_pos = floor(arma::randu<double>( ) * (num_clusters_categorical - (1+1e-12)));
+// 
+//     if(new_pos >= i){
+//       new_pos++;
+//     }
+// 
+//     // if(new_pos < min_num_clusters || i < min_num_clusters){
+// 
+// 
+//       // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
+//       // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
+//       //
+//       // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
+//       // cluster_labels_categorical.elem(label_2_ind).fill(i);
+// 
+//       // std::cout << "Swapping labels\n";
+// 
+//       // +1 as cluster labels are on a 1:n scale whereas C++ is 0:(n-1)
+//       new_labels = swap_labels(cluster_labels_categorical, i + 1, new_pos + 1);
+// 
+//       // std::cout << "\n=== LABELS ===============================================\n";
+//       // std::cout << "Current labels:" << cluster_labels_categorical << "\n\n";
+//       // std::cout << "Proposed new labels:" << new_labels << "\n\n";
+// 
+//       // std::cout << "Swapping weights\n";
+// 
+//       new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
+// 
+//       // std::cout << "\n=== WEIGHTS ==============================================\n";
+//       // std::cout << "Current weights:\n" << cluster_weights_categorical << "\n\n";
+//       // std::cout << "Proposed new weights:\n" << new_weights << "\n\n";
+// 
+// 
+//       // std::cout << "Calculating new phi\n";
+// 
+//       new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
+//                                                           new_labels,
+//                                                           cluster_weights_gaussian,
+//                                                           new_weights,
+//                                                           v,
+//                                                           n,
+//                                                           min_num_clusters,
+//                                                           a0,
+//                                                           b0);
+// 
+//       // if(new_context_similarity != 0
+//       //      || (new_context_similarity == 0 && context_similarity == 0)){
+//       // Compare new and old context similarities if swap occurs
+// 
+//       log_old_similarity = std::log(context_similarity + 1);
+//       log_new_similarity = std::log(new_context_similarity + 1);
+// 
+//       log_accept = log_new_similarity - log_old_similarity;
+// 
+//       // accept = exp(log_accept)/(context_similarity + new_context_similarity + 2);
+// 
+//       // arma::vec prob_vec(2);
+//       // prob_vec(0) = log_old_similarity;
+//       // prob_vec(1) = log_new_similarity;
+//       // prob_vec = exp(prob_vec - max(prob_vec));
+//       // prob_vec = prob_vec/sum(prob_vec);
+//       //
+//       // double u;
+//       // u = arma::randu<double>( );
+// 
+//       // include + 1 if labels centred on 1
+//       // arma::uword pred_ind = 0;
+//       //
+//       // pred_ind = sum(u > cumsum(prob_vec)); // 1 +
+// 
+// 
+// 
+//       accept = 1.0;
+// 
+//       if(log_accept < 0){
+//         accept = exp(log_accept);
+//       }
+// 
+// 
+//       // std::cout << "position 1: " << i << "\n";
+//       // std::cout << "position 2: " << new_pos << "\n\n";
+//       // std::cout << log_accept << "\n";
+//       // std::cout << log_new_similarity << "\n";
+//       // std::cout << log_old_similarity << "\n\n";
+// 
+//       // rejection sampling
+//       // accept = 1;
+//       //
+//       // if(log_accept < 0){
+//       //   accept = exp(log_accept);
+//       // }
+// 
+//       // if swap accepted update labels, weights and similarity parameter
+//       // if(pred_ind == 1){
+//       if(arma::randu<double>( ) < accept){
+// 
+//         // std::cout << i << "\n";
+//         // std::cout << new_pos << "\n";
+//         // std::cout << accept << "\n";
+//         // std::cout << context_similarity << "\n";
+//         // std::cout << new_context_similarity << "\n\n";
+// 
+//         // std::cout << "Accept and assign updates\n";
+// 
+//         // std::cout << "Labels\n";
+//         cluster_labels_categorical = new_labels;
+// 
+//         // std::cout << "Weights\n";
+//         cluster_weights_categorical = new_weights;
+// 
+//         // std::cout << "Phi\n\n";
+//         context_similarity = new_context_similarity;
+// 
+//       // }
+//       // }
+// 
+//     }
+//   }
+//   // std::vector<double> doubleVec(cluster_labels_categorical.begin(),
+//   //                               cluster_labels_categorical.end());
+//   // arma::vec X(doubleVec);
+// 
+//   // std::cout << "Create output vector\n";
+//   arma::vec output = arma::zeros<arma::vec>(n + num_clusters_categorical + 1);
+// 
+//   // std::cout << "Assign labels to output\n";
+//   // std::cout << cluster_labels_categorical.n_elem << "\n";
+//   output.subvec(0, n - 1) = arma::conv_to<arma::vec>::from(cluster_labels_categorical); //X;
+// 
+//   // std::cout << "Assign weights to output\n";
+// 
+//   output.subvec(n, n + num_clusters_categorical - 1) = cluster_weights_categorical;
+//   output(n + num_clusters_categorical) = context_similarity;
+//   return output;
+// }
+
 arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
                                arma::uvec cluster_labels_categorical,
                                arma::vec cluster_weights_gaussian,
                                arma::vec cluster_weights_categorical,
+                               arma::uword num_clusters_gaussian,
                                arma::uword num_clusters_categorical,
                                double context_similarity,
                                arma::uword min_num_clusters,
                                double v,
                                arma::uword n,
                                double a0,
-                               double b0){
-  
+                               double b0,
+                               double Z){
+
   arma::uword new_pos = 0;
-  
+
   double new_context_similarity = 0.0;
-  
+
   arma::uvec new_labels(n);
   arma::vec new_weights(num_clusters_categorical);
-  
-  double log_old_similarity = 0.0; 
-  double log_new_similarity = 0.0;
-  
+
+  // double log_old_similarity = 0.0;
+  // double log_new_similarity = 0.0;
+
   double log_accept = 0.0;
   double accept = 0.0;
-  
+
+  double old_score = 0.0;
+  double new_score = 0.0;
+
   // Should this be bound as the min_num_clusters or min_num_clusters - 1?
   for(arma::uword i = 0; i < num_clusters_categorical; i++){
-    
+
     // Generate a new position not equal to i
     // multiply a random number from [0,1] by the upper bound of i less 1
     // this less 1 is used so that if we equal i we can add 1 and treat all
@@ -1282,40 +1485,17 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
     // elements and the +1 to avoid selecting the same position as i, I think we
     // need to use "- 2".
     new_pos = floor(arma::randu<double>( ) * (num_clusters_categorical - (1+1e-12)));
-    
+
     if(new_pos >= i){
       new_pos++;
     }
-    
+
     // if(new_pos < min_num_clusters || i < min_num_clusters){
-        
-      
-      // arma::uvec label_1_ind = find(cluster_labels_categorical == i);
-      // arma::uvec label_2_ind = find(cluster_labels_categorical == new_pos);
-      // 
-      // cluster_labels_categorical.elem(label_1_ind).fill(new_pos);
-      // cluster_labels_categorical.elem(label_2_ind).fill(i);
-      
-      // std::cout << "Swapping labels\n";
-      
-      // +1 as cluster labels are on a 1:n scale whereas C++ is 0:(n-1)
+
       new_labels = swap_labels(cluster_labels_categorical, i + 1, new_pos + 1);
-      
-      // std::cout << "\n=== LABELS ===============================================\n";
-      // std::cout << "Current labels:" << cluster_labels_categorical << "\n\n";
-      // std::cout << "Proposed new labels:" << new_labels << "\n\n";
-      
-      // std::cout << "Swapping weights\n";
-      
+
       new_weights = swap_cluster_weights(cluster_weights_categorical, i, new_pos);
-      
-      // std::cout << "\n=== WEIGHTS ==============================================\n";
-      // std::cout << "Current weights:\n" << cluster_weights_categorical << "\n\n";
-      // std::cout << "Proposed new weights:\n" << new_weights << "\n\n";
-      
-      
-      // std::cout << "Calculating new phi\n";
-      
+
       new_context_similarity = compare_context_similarity(cluster_labels_gaussian,
                                                           new_labels,
                                                           cluster_weights_gaussian,
@@ -1325,93 +1505,58 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_gaussian,
                                                           min_num_clusters,
                                                           a0,
                                                           b0);
-      
-      // if(new_context_similarity != 0 
-      //      || (new_context_similarity == 0 && context_similarity == 0)){
-      // Compare new and old context similarities if swap occurs
-      
-      log_old_similarity = std::log(context_similarity + 1);
-      log_new_similarity = std::log(new_context_similarity + 1);
-      
-      log_accept = log_new_similarity - log_old_similarity;
-      
-      // accept = exp(log_accept)/(context_similarity + new_context_similarity + 2);
-      
-      // arma::vec prob_vec(2);
-      // prob_vec(0) = log_old_similarity;
-      // prob_vec(1) = log_new_similarity;
-      // prob_vec = exp(prob_vec - max(prob_vec));
-      // prob_vec = prob_vec/sum(prob_vec);
-      // 
-      // double u;
-      // u = arma::randu<double>( );
-      
-      // include + 1 if labels centred on 1
-      // arma::uword pred_ind = 0;
-      // 
-      // pred_ind = sum(u > cumsum(prob_vec)); // 1 +
-      
-      
-      
+
+      // log_old_similarity = std::log(context_similarity + 1);
+      // log_new_similarity = std::log(new_context_similarity + 1);
+      //
+      // log_accept = log_new_similarity - log_old_similarity;
+
+      old_score = log_model_likelihood(v,
+                                       Z,
+                                       n,
+                                       context_similarity,
+                                       cluster_labels_gaussian,
+                                       cluster_labels_categorical,
+                                       cluster_weights_gaussian,
+                                       cluster_weights_categorical);
+
+      new_score = log_model_likelihood(v,
+                                       Z,
+                                       n,
+                                       new_context_similarity,
+                                       cluster_labels_gaussian,
+                                       new_labels,
+                                       cluster_weights_gaussian,
+                                       new_weights);
+
+
+      log_accept = new_score - old_score;
+
       accept = 1.0;
 
       if(log_accept < 0){
         accept = exp(log_accept);
       }
-      
-      
-      // std::cout << "position 1: " << i << "\n";
-      // std::cout << "position 2: " << new_pos << "\n\n";
-      // std::cout << log_accept << "\n";
-      // std::cout << log_new_similarity << "\n";
-      // std::cout << log_old_similarity << "\n\n";
-      
-      // rejection sampling
-      // accept = 1;
-      // 
-      // if(log_accept < 0){
-      //   accept = exp(log_accept);
-      // }
-      
-      // if swap accepted update labels, weights and similarity parameter
-      // if(pred_ind == 1){
+
       if(arma::randu<double>( ) < accept){
-        
-        // std::cout << i << "\n";
-        // std::cout << new_pos << "\n";
-        // std::cout << accept << "\n";
-        // std::cout << context_similarity << "\n";
-        // std::cout << new_context_similarity << "\n\n";
-        
-        // std::cout << "Accept and assign updates\n";
-        
+
         // std::cout << "Labels\n";
         cluster_labels_categorical = new_labels;
-        
+
         // std::cout << "Weights\n";
         cluster_weights_categorical = new_weights;
-        
+
         // std::cout << "Phi\n\n";
         context_similarity = new_context_similarity;
-        
-      // }
-      // }
-      
-    }
-  }
-  // std::vector<double> doubleVec(cluster_labels_categorical.begin(),
-  //                               cluster_labels_categorical.end());
-  // arma::vec X(doubleVec);
 
-  // std::cout << "Create output vector\n";
+
+      }
+    // }
+  }
+
   arma::vec output = arma::zeros<arma::vec>(n + num_clusters_categorical + 1);
-  
-  // std::cout << "Assign labels to output\n";
-  // std::cout << cluster_labels_categorical.n_elem << "\n";
   output.subvec(0, n - 1) = arma::conv_to<arma::vec>::from(cluster_labels_categorical); //X;
-  
-  // std::cout << "Assign weights to output\n";
-  
+
   output.subvec(n, n + num_clusters_categorical - 1) = cluster_weights_categorical;
   output(n + num_clusters_categorical) = context_similarity;
   return output;
@@ -1762,14 +1907,28 @@ Rcpp::List mdi(arma::mat gaussian_data,
                                               cluster_labels_categorical,
                                               cluster_weights_gaussian,
                                               cluster_weights_categorical,
+                                              num_clusters_gaussian,
                                               num_clusters_categorical,
                                               context_similarity,
                                               min_num_clusters,
                                               v,
                                               n,
                                               a0,
-                                              b0);
+                                              b0,
+                                              Z);
     
+    // labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
+    //                                           cluster_labels_categorical,
+    //                                           cluster_weights_gaussian,
+    //                                           cluster_weights_categorical,
+    //                                           num_clusters_categorical,
+    //                                           context_similarity,
+    //                                           min_num_clusters,
+    //                                           v,
+    //                                           n,
+    //                                           a0,
+    //                                           b0);
+
     // Separate the output into the relevant components
     
     // std::cout << "Values calculated now sharing out\n";
