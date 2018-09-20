@@ -264,7 +264,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
       normalise
     )
   } else {
-    sim <- mdi(
+    sim <- mdi_gauss_cat(
       data,
       cat_data,
       mu_0,
@@ -539,7 +539,7 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
     )
   }
   
-  sim <- mdi(
+  sim <- mdi_gauss_cat(
     data,
     cat_data,
     mu_0,

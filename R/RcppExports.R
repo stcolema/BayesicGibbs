@@ -41,8 +41,16 @@ gaussian_clustering <- function(num_iter, concentration_0, scale_0, class_labels
     .Call(`_BayesicGibbs_gaussian_clustering`, num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors, normalise)
 }
 
-mdi <- function(gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, a0, b0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE, normalise = FALSE) {
-    .Call(`_BayesicGibbs_mdi`, gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, a0, b0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier, t_df, record_posteriors, normalise)
+mdi_gauss_cat <- function(gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, a0, b0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE, normalise = FALSE) {
+    .Call(`_BayesicGibbs_mdi_gauss_cat`, gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, a0, b0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec, num_iter, burn, thinning, outlier, t_df, record_posteriors, normalise)
+}
+
+mdi_gauss_gauss <- function(data_1, data_2, mu_0_1, lambda_0_1, scale_0_1, df_0_1, mu_0_2, lambda_0_2, scale_0_2, df_0_2, clust_weight_priors_1, clust_weight_priors_2, clust_labels_1, clust_labels_2, n_clust_1, n_clust_2, fix_vec_1, fix_vec_2, a0, b0, num_iter, burn, thinning, outlier_1 = FALSE, t_df_1 = 4.0, outlier_2 = FALSE, t_df_2 = 4.0, record_posteriors = FALSE, normalise_1 = FALSE, normalise_2 = FALSE) {
+    .Call(`_BayesicGibbs_mdi_gauss_gauss`, data_1, data_2, mu_0_1, lambda_0_1, scale_0_1, df_0_1, mu_0_2, lambda_0_2, scale_0_2, df_0_2, clust_weight_priors_1, clust_weight_priors_2, clust_labels_1, clust_labels_2, n_clust_1, n_clust_2, fix_vec_1, fix_vec_2, a0, b0, num_iter, burn, thinning, outlier_1, t_df_1, outlier_2, t_df_2, record_posteriors, normalise_1, normalise_2)
+}
+
+mdi_cat_cat <- function(data_1, data_2, class_dist_prior_1, class_dist_prior_2, clust_weight_priors_1, clust_weight_priors_2, clust_labels_1, clust_labels_2, n_clust_1, n_clust_2, fix_vec_1, fix_vec_2, a0, b0, num_iter, burn, thinning) {
+    .Call(`_BayesicGibbs_mdi_cat_cat`, data_1, data_2, class_dist_prior_1, class_dist_prior_2, clust_weight_priors_1, clust_weight_priors_2, clust_labels_1, clust_labels_2, n_clust_1, n_clust_2, fix_vec_1, fix_vec_2, a0, b0, num_iter, burn, thinning)
 }
 
 rcpparma_hello_world <- function() {
