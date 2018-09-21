@@ -305,11 +305,7 @@ arma::vec concentration_n(arma::vec concentration_0,
     class_count = 0;
     class_members = find(cluster_labels == i);
     class_count = class_members.n_elem;
-    // for (arma::uword j = 0; j < n; j++ ) {
-    //   if (cluster_labels(j) == i) {
-    //     class_count++;
-    //   }
-    // }
+
     
     concentration(i - 1) = arma::as_scalar(concentration_0(i - 1)) + class_count;
   }
@@ -368,7 +364,7 @@ arma::vec concentration_n_class(arma::vec concentration_0,
   return concentration;
 }
 
-
+// Dirichlet posterior for class weights
 arma::vec dirichlet_posterior_class(arma::vec concentration_0,
                                     arma::uvec cluster_labels,
                                     arma::uword num_clusters){
@@ -389,6 +385,78 @@ arma::vec dirichlet_posterior_class(arma::vec concentration_0,
   
   double total_cluster_weight = sum(cluster_weight);
   cluster_weight = cluster_weight / total_cluster_weight;
+  return cluster_weight;
+}
+
+// MDI class weights (Gamma rather than dirichlet)
+arma::vec gamma_posterior(arma::vec concentration_0,
+                          arma::uvec cluster_labels,
+                          arma::uword num_clusters,
+                          double rate
+                          ){
+  arma::vec cluster_weight = arma::zeros<arma::vec>(num_clusters);
+  
+  arma::vec concentration(num_clusters);
+  concentration = concentration_n(concentration_0,
+                                  cluster_labels,
+                                  num_clusters);
+  
+  for (arma::uword i = 0; i < num_clusters; i++) {
+    cluster_weight(i) = arma::randg( arma::distr_param(arma::as_scalar(concentration(i)), 1.0) );
+  }
+  return cluster_weight;
+}
+
+double mdi_cluster_rate(double v,
+                        arma::uword n_clust_comp,
+                        arma::uword cluster_index,
+                        arma::vec cluster_weights_comp,
+                        arma::uvec cluster_labels_1,
+                        arma::uvec cluster_labels_2,
+                        double phi){
+  double b = 0.0;
+  
+  for(arma::uword i = 0; i < n_clust_comp; i++){
+    b += cluster_weights_comp(i) * (1 + phi * (cluster_index == i));
+  }
+  
+  b = b * v;
+  
+  return b;
+}
+
+arma::vec mdi_cluster_weights(arma::vec shape_0,
+                              arma::vec rate_0,
+                              double v,
+                              arma::uword n_clust,
+                              arma::uword n_clust_comp,
+                              arma::vec cluster_weights_comp,
+                              arma::uvec cluster_labels,
+                              arma::uvec cluster_labels_comp,
+                              double phi){
+  
+  arma::vec cluster_weight = arma::zeros<arma::vec>(n_clust);
+  
+  double b = 0.0; 
+
+  arma::vec shape_n(n_clust);
+  
+  shape_n = concentration_n(shape_0,
+                            cluster_labels,
+                            n_clust);
+  
+  
+  for (arma::uword i = 0; i < n_clust; i++) {
+    b = mdi_cluster_rate(v,
+                         n_clust_comp,
+                         i,
+                         cluster_weights_comp,
+                         cluster_labels,
+                         cluster_labels_comp,
+                         phi);
+    
+    cluster_weight(i) = arma::randg( arma::distr_param(arma::as_scalar(shape_n(i)), 1 / (b + rate_0(i))) );
+  }
   return cluster_weight;
 }
 
@@ -943,8 +1011,11 @@ double sample_phi(arma::uvec cluster_labels_1,
     
     pred_ind = sum(u > cumsum(prob_vec)); // 1 +
     
-    // phi_12 = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
-    phi = arma::randg( arma::distr_param(pred_ind + a0, 1/b) );
+    // std::cout << "\n\ncount same cluster:\n" <<  count_same_cluster 
+    //           << "\na0:\n" << a0 << "\nbn:\n" << b << "\n";
+    
+    phi = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
+    // phi = arma::randg( arma::distr_param(pred_ind + a0, 1/b) );
     
   }
   
@@ -1143,6 +1214,7 @@ double log_model_likelihood(double v,
     + log(cluster_weights_1(cluster_labels_1(i) - 1)) 
     + log(cluster_weights_2(cluster_labels_2(i) - 1));
   }
+  
   score += (n - 1) * log(v) - v * Z - log_factorial(n - 1);
   
   return score;
@@ -1200,11 +1272,13 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
     // Should it be "- 2" rather than "- 1"? Due to C++'s method of accessing
     // elements and the +1 to avoid selecting the same position as i, I think we
     // need to use "- 2".
-    new_pos = floor(arma::randu<double>( ) * (num_clusters_2 - (1+1e-12)));
+    new_pos = floor(arma::randu<double>( ) * (num_clusters_2 - 1));
     
     if(new_pos >= i){
       new_pos++;
     }
+    
+    // if(i < min_num_clusters || new_pos < min_num_clusters){
     
     new_labels = swap_labels(cluster_labels_2, i + 1, new_pos + 1);
     
@@ -1220,23 +1294,25 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
                          a0,
                          b0);
     
-    old_score = log_model_likelihood(v,
-                                     Z,
-                                     n,
-                                     phi,
-                                     cluster_labels_1,
-                                     cluster_labels_2,
-                                     cluster_weights_1,
-                                     cluster_weights_2);
+    old_score = log(phi);
+      // log_model_likelihood(v,
+      //                                Z,
+      //                                n,
+      //                                phi,
+      //                                cluster_labels_1,
+      //                                cluster_labels_2,
+      //                                cluster_weights_1,
+      //                                cluster_weights_2);
     
-    new_score = log_model_likelihood(v,
-                                     Z,
-                                     n,
-                                     new_phi,
-                                     cluster_labels_1,
-                                     new_labels,
-                                     cluster_weights_1,
-                                     new_weights);
+    new_score = log(new_phi);
+      // log_model_likelihood(v,
+      //                                Z,
+      //                                n,
+      //                                new_phi,
+      //                                cluster_labels_1,
+      //                                new_labels,
+      //                                cluster_weights_1,
+      //                                new_weights);
     
     
     log_accept = new_score - old_score;
@@ -1346,6 +1422,8 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   arma::vec cluster_weights_gaussian(num_clusters_gaussian);
   arma::vec cluster_weights_categorical(num_clusters_categorical);
   
+
+  
   // These are the local cubes of posterior mean and variance overwritten each
   // iteration
   arma::field<arma::cube> loc_mu_variance(2);
@@ -1407,19 +1485,56 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   
   // std::cout << "All declared \n";
   
+  arma::vec rate_0_gauss(num_clusters_gaussian);
+  arma::vec rate_0_cat(num_clusters_categorical);
+  
+  // Placeholder prior
+  rate_0_gauss.fill(1);
+  rate_0_cat.fill(1);
+  
+  // Not sure this is sensible
+  cluster_weights_gaussian = cluster_weight_priors_gaussian;
+  cluster_weights_categorical = cluster_weight_priors_categorical;
+  
   for(arma::uword i = 0; i < num_iter; i++){
     
     
     
     // sample cluster weights for the two datasets
-    cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_gaussian,
+    // cluster_weights_gaussian = gamma_posterior(cluster_weight_priors_gaussian,
+    //                                            cluster_labels_gaussian,
+    //                                            num_clusters_gaussian);
+    
+    cluster_weights_gaussian = mdi_cluster_weights(cluster_weight_priors_gaussian,
+                                                   rate_0_gauss,
+                                                   v,
+                                                   num_clusters_gaussian,
+                                                   num_clusters_categorical,
+                                                   cluster_weights_categorical,
                                                    cluster_labels_gaussian,
-                                                   num_clusters_gaussian);
+                                                   cluster_labels_categorical,
+                                                   context_similarity);
     
-    cluster_weights_categorical = dirichlet_posterior(cluster_weight_priors_categorical,
+    // cluster_weights_categorical = gamma_posterior(cluster_weight_priors_categorical,
+    //                                               cluster_labels_categorical,
+    //                                               num_clusters_categorical);
+    
+    
+    cluster_weights_categorical = mdi_cluster_weights(cluster_weight_priors_categorical,
+                                                      rate_0_cat,
+                                                      v,
+                                                      num_clusters_categorical,
+                                                      num_clusters_gaussian,
+                                                      cluster_weights_gaussian,
                                                       cluster_labels_categorical,
-                                                      num_clusters_categorical);
+                                                      cluster_labels_gaussian,
+                                                      context_similarity);
     
+    // std::cout << "Gaussian cluster weights:\n" << cluster_weights_gaussian 
+    //   << "\n\n";
+    // 
+    // std::cout << "Categorical cluster weights:\n" << cluster_weights_categorical 
+    //           << "\n\n";
     
     
     // Entropy for graphing convergence
@@ -1484,11 +1599,11 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
     // v = Rf_rgamma(n, Z);
     v = arma::randg( arma::distr_param(n, 1/Z) );
     
-    // std::cout << Z << "\n";
+    // std::cout << "\nNormalising constant:\n" <<  Z << "\n";
     // std::cout << arma::randg( arma::distr_param(n, 1/Z) ) << "\n";
     // std::cout << arma::randg( arma::distr_param(n, Z) ) << "\n";
     
-    // std::cout << "Sampled v \n";
+    // std::cout << "Sampled v:\n" << v << "\n\n";
     
     // sample 
     for(arma::uword j = 0; j < n; j++){
@@ -1745,16 +1860,49 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
   
   // std::cout << "All declared \n";
   
+  
+  arma::vec rate_0_1(n_clust_1);
+  arma::vec rate_0_2(n_clust_2);
+  
+  // Placeholder prior
+  rate_0_1.fill(1);
+  rate_0_2.fill(1);
+  
+  // Not sure this is sensible - simply to have non-zero numbers here
+  clust_weights_1 = clust_weight_priors_1;
+  clust_weights_2 = clust_weight_priors_2;
+  
   for(arma::uword i = 0; i < num_iter; i++){
     
     // sample cluster weights for the two datasets
-    clust_weights_1 = dirichlet_posterior(clust_weight_priors_1,
-                                          clust_labels_1,
-                                          n_clust_1);
+    // clust_weights_1 = gamma_posterior(clust_weight_priors_1,
+    //                                   clust_labels_1,
+    //                                   n_clust_1);
     
-    clust_weights_2 = dirichlet_posterior(clust_weight_priors_2,
+    
+    clust_weights_1 = mdi_cluster_weights(clust_weight_priors_1,
+                                                   rate_0_1,
+                                                   v,
+                                                   n_clust_1,
+                                                   n_clust_2,
+                                                   clust_weights_2,
+                                                   clust_labels_1,
+                                                   clust_labels_2,
+                                                   phi);
+    
+    // clust_weights_2 = gamma_posterior(clust_weight_priors_2,
+    //                                   clust_labels_2,
+    //                                   n_clust_2);
+    
+    clust_weights_2 = mdi_cluster_weights(clust_weight_priors_2,
+                                          rate_0_2,
+                                          v,
+                                          n_clust_2,
+                                          n_clust_1,
+                                          clust_weights_1,
                                           clust_labels_2,
-                                          n_clust_2);
+                                          clust_labels_1,
+                                          phi);
     
     // Entropy for graphing convergence
     entropy_cw(i) = entropy(clust_weights_1);
@@ -2040,16 +2188,48 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
   
   // std::cout << "All declared \n";
   
+  
+  arma::vec rate_0_1(n_clust_1);
+  arma::vec rate_0_2(n_clust_2);
+  
+  // Placeholder prior
+  rate_0_1.fill(1);
+  rate_0_2.fill(1);
+  
+  // Not sure this is sensible - simply to have non-zero numbers here
+  clust_weights_1 = clust_weight_priors_1;
+  clust_weights_2 = clust_weight_priors_2;
+  
   for(arma::uword i = 0; i < num_iter; i++){
     
     // sample cluster weights for the two datasets
-    clust_weights_1 = dirichlet_posterior(clust_weight_priors_1,
-                                          clust_labels_1,
-                                          n_clust_1);
+    // clust_weights_1 = gamma_posterior(clust_weight_priors_1,
+    //                                   clust_labels_1,
+    //                                   n_clust_1);
+    // 
+    // clust_weights_2 = gamma_posterior(clust_weight_priors_2,
+    //                                   clust_labels_2,
+    //                                   n_clust_2);
     
-    clust_weights_2 = dirichlet_posterior(clust_weight_priors_2,
+    clust_weights_1 = mdi_cluster_weights(clust_weight_priors_1,
+                                          rate_0_1,
+                                          v,
+                                          n_clust_1,
+                                          n_clust_2,
+                                          clust_weights_2,
+                                          clust_labels_1,
                                           clust_labels_2,
-                                          n_clust_2);
+                                          phi);
+    
+    clust_weights_2 = mdi_cluster_weights(clust_weight_priors_2,
+                                          rate_0_2,
+                                          v,
+                                          n_clust_2,
+                                          n_clust_1,
+                                          clust_weights_1,
+                                          clust_labels_2,
+                                          clust_labels_1,
+                                          phi);
     
     // Entropy for graphing convergence
     entropy_cw(i) = entropy(clust_weights_1);
