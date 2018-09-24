@@ -414,10 +414,13 @@ double mdi_cluster_rate(double v,
                         double phi){
   double b = 0.0;
   
-  for(arma::uword i = 0; i < n_clust_comp; i++){
-    b += cluster_weights_comp(i) * (1 + phi * (cluster_index == i));
-  }
+  b = arma::sum(cluster_weights_comp) 
+      + cluster_weights_comp(cluster_index) * phi;
   
+  // for(arma::uword i = 0; i < n_clust_comp; i++){
+  //   b += cluster_weights_comp(i) * (1 + phi * (cluster_index == i));
+  // }
+
   b = b * v;
   
   return b;
@@ -443,18 +446,28 @@ arma::vec mdi_cluster_weights(arma::vec shape_0,
                             cluster_labels,
                             n_clust) + 1;
   
+  b = v * arma::sum(cluster_weights_comp);
   
   for (arma::uword i = 0; i < n_clust; i++) {
-    b = mdi_cluster_rate(v,
-                         n_clust_comp,
-                         i,
-                         cluster_weights_comp,
-                         phi);
     
+    if(i < n_clust_comp){
+      b += v * cluster_weights_comp(i) * phi;
+    }
+    // b = mdi_cluster_rate(v,
+    //                      n_clust_comp,
+    //                      i,
+    //                      cluster_weights_comp,
+    //                      phi);
+    // 
     // std::cout << "\nShape: " << shape_n(i) << "\nRate: " << b + rate_0(i) 
     //           << "\nStrategic latent variable: " << v << "\n\n";
     
-    cluster_weight(i) = arma::randg( arma::distr_param(arma::as_scalar(shape_n(i)), 1 / (b + rate_0(i))) );
+    cluster_weight(i) = arma::randg(arma::distr_param(shape_n(i), 1 / (b + rate_0(i))));
+    
+    if(i < n_clust_comp){
+      b -= v * cluster_weights_comp(i) * phi;
+    }
+    
   }
   return cluster_weight;
 }
@@ -1039,8 +1052,8 @@ double calculate_normalising_constant(arma::vec cluster_weights_1,
   
   for(arma::uword i = 0; i < num_clusters_1; i++){
     for(arma::uword j = 0; j < num_clusters_2; j++){
-      Z = Z + cluster_weights_1(i) * cluster_weights_2(j) *
-        (1 + context_similarity * (i == j));
+      Z += (cluster_weights_1(i) * cluster_weights_2(j))
+            * (1 + context_similarity * (i == j));
     }
   }
   return Z;
@@ -2068,7 +2081,7 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
     
     // Do not allow label flipping if any of context 2 have fixed labels
     
-    if(data_2_unsupervised){
+    // if(data_2_unsupervised){
       labels_weights_phi = cluster_label_update(clust_labels_1,
                                                 clust_labels_2,
                                                 clust_weights_1,
@@ -2116,7 +2129,7 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
       
       // std::cout <<"\nContext similarity after label swapping:\n" << context_similarity << "\n\n";
       
-    }
+    // }
     
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
@@ -2373,7 +2386,7 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
     
     // std::cout << cluster_labels_categorical.n_elem << "\n"; 
     
-    if(data_2_unsupervised){
+    // if(data_2_unsupervised){
       
       // Update cluster labels in second dataset
       // Return the new labels, weights and similarity in a single vector
@@ -2423,7 +2436,7 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
       // std::cout <<"phi updated \n";
       
       // std::cout <<"\nContext similarity after label swapping:\n" << context_similarity << "\n\n";
-    }
+    // }
       
     // if current iteration is a recorded iteration, save the labels
     if (i >= burn && (i - burn) % thinning == 0) {
