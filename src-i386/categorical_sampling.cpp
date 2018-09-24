@@ -1239,6 +1239,19 @@ double log_model_likelihood(double v,
   return score;
 }
 
+double comp(arma::uword n,
+            double context_similarity,
+            arma::uvec cluster_labels_1,
+            arma::uvec cluster_labels_2){
+  
+  double score = 0.0;
+  
+  for(arma::uword i = 0; i < n; i++){
+    score += log(1 + context_similarity * (cluster_labels_1(i) == cluster_labels_2(i)));
+  }
+  
+  return score;
+}
 
 //  Have to create a function for label swapping
 // This will involve comparing likelihoods with and without swap and then 
@@ -1270,7 +1283,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
   
   arma::uword new_pos = 0;
   
-  double new_phi = 0.0;
+  // double new_phi = 0.0;
   
   arma::uvec new_labels(n);
   arma::vec new_weights(num_clusters_2);
@@ -1281,8 +1294,8 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
   double old_score = 0.0;
   double new_score = 0.0;
   
-  arma::uword curr_count = 0;
-  arma::uword new_count = 0;
+  // arma::uword curr_count = 0;
+  // arma::uword new_count = 0;
   
   // Should this be bound as the min_num_clusters or min_num_clusters - 1?
   for(arma::uword i = 0; i < num_clusters_2; i++){
@@ -1306,36 +1319,45 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
       
       new_weights = swap_cluster_weights(cluster_weights_2, i, new_pos);
       
-      new_phi = sample_phi(cluster_labels_1,
-                           new_labels,
-                           cluster_weights_1,
-                           new_weights,
-                           v,
-                           n,
-                           min_num_clusters,
-                           a0,
-                           b0);
+      // new_phi = sample_phi(cluster_labels_1,
+      //                      new_labels,
+      //                      cluster_weights_1,
+      //                      new_weights,
+      //                      v,
+      //                      n,
+      //                      min_num_clusters,
+      //                      a0,
+      //                      b0);
       
-      old_score = log(phi);
-        // log_model_likelihood(v,
-        //                                Z,
-        //                                n,
-        //                                phi,
-        //                                cluster_labels_1,
-        //                                cluster_labels_2,
-        //                                cluster_weights_1,
-        //                                cluster_weights_2);
+      old_score = log_model_likelihood(v,
+                                       Z,
+                                       n,
+                                       phi,
+                                       cluster_labels_1,
+                                       cluster_labels_2,
+                                       cluster_weights_1,
+                                       cluster_weights_2);
       
-      new_score = log(new_phi);
-        // log_model_likelihood(v,
-        //                                Z,
-        //                                n,
-        //                                new_phi,
-        //                                cluster_labels_1,
-        //                                new_labels,
-        //                                cluster_weights_1,
-        //                                new_weights);
+      new_score = log_model_likelihood(v,
+                                       Z,
+                                       n,
+                                       phi,
+                                       cluster_labels_1,
+                                       new_labels,
+                                       cluster_weights_1,
+                                       new_weights);
       
+      
+      log_accept = new_score - old_score;
+      
+      old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
+      new_score = comp(n, phi, cluster_labels_1, new_labels);
+      
+      if(pow((new_score - old_score) - log_accept, 2) > 0.001){
+        std::cout << "Difference of opinion\n";
+        std::cout << "Clever: " << (new_score - old_score)
+                  << "\nFull: " << log_accept << "\n";
+      }
       
       log_accept = new_score - old_score;
       
@@ -1345,14 +1367,14 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
         accept = exp(log_accept);
       }
       
-      curr_count = count_common_cluster(cluster_labels_1,
-                                        cluster_labels_2,
-                                        n);
-  
-      new_count = count_common_cluster(cluster_labels_1,
-                                       new_labels,
-                                       n);
-  
+      // curr_count = count_common_cluster(cluster_labels_1,
+      //                                   cluster_labels_2,
+      //                                   n);
+      // 
+      // new_count = count_common_cluster(cluster_labels_1,
+      //                                  new_labels,
+      //                                  n);
+
       // std::cout << "Current position: " << i << "\nNew position: " << new_pos
       //   << "\nCurrent phi: " << phi << "\nNew phi: " << new_phi
       //   << "\nCurrent common cluster count: " << curr_count
@@ -1370,7 +1392,7 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
         cluster_weights_2 = new_weights;
         
         // std::cout << "Phi\n\n";
-        phi = new_phi;
+        // phi = new_phi;
     
       }
     }
