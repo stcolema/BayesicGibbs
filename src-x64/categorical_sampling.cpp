@@ -414,12 +414,12 @@ double mdi_cluster_rate(double v,
                         double phi){
   double b = 0.0;
   
-  b = arma::sum(cluster_weights_comp) 
-      + cluster_weights_comp(cluster_index) * phi;
+  // b = arma::sum(cluster_weights_comp) 
+  //     + cluster_weights_comp(cluster_index) * phi;
   
-  // for(arma::uword i = 0; i < n_clust_comp; i++){
-  //   b += cluster_weights_comp(i) * (1 + phi * (cluster_index == i));
-  // }
+  for(arma::uword i = 0; i < n_clust_comp; i++){
+    b += cluster_weights_comp(i) * (1 + phi * (cluster_index == i));
+  }
 
   b = b * v;
   
@@ -438,7 +438,8 @@ arma::vec mdi_cluster_weights(arma::vec shape_0,
   
   arma::vec cluster_weight = arma::zeros<arma::vec>(n_clust);
   
-  double b = 0.0; 
+  double b = 0.0;
+  // double b1 = 0.0; 
 
   arma::vec shape_n(n_clust);
   
@@ -453,11 +454,16 @@ arma::vec mdi_cluster_weights(arma::vec shape_0,
     if(i < n_clust_comp){
       b += v * cluster_weights_comp(i) * phi;
     }
+    
     // b = mdi_cluster_rate(v,
     //                      n_clust_comp,
     //                      i,
     //                      cluster_weights_comp,
     //                      phi);
+    // 
+    // if (abs(b - b1) > 0.001){
+    //   std::cout << "\nRates differ:\n" << b << "\n" << b1 << "\n\n";
+    // }
     // 
     // std::cout << "\nShape: " << shape_n(i) << "\nRate: " << b + rate_0(i) 
     //           << "\nStrategic latent variable: " << v << "\n\n";
@@ -706,7 +712,7 @@ arma::vec sample_gaussian_cluster(arma::vec point,
   
   arma::uvec count_probs;
   
-  arma::uword d = data.n_cols;;
+  arma::uword d = data.n_cols;
   
   for(arma::uword i = 1; i < k + 1; i++){
     curr_weight = log(class_weights(i - 1));
@@ -714,25 +720,30 @@ arma::vec sample_gaussian_cluster(arma::vec point,
     if(outlier && i == k){
       
       exponent = arma::as_scalar(arma::trans(point - global_mean) 
-                                   * arma::inv(global_variance)
-                                   * (point - global_mean));
+                                 * arma::inv(global_variance)
+                                 * (point - global_mean));
                                    
-                                   log_det = arma::log_det(global_variance).real();
+      log_det = arma::log_det(global_variance).real();
                                    
-                                   log_likelihood = (lgamma((t_df + d)/2.0) - lgamma(t_df/2.0)
-                                                       + d/2.0 * log(t_df * M_PI) + log_det - ((t_df + d)/2.0) *
-                                                         log(1 + (1/t_df) * exponent));
+      log_likelihood = lgamma((t_df + d)/2.0)
+                       - lgamma(t_df/2.0)
+                       + d/2.0 * log(t_df * M_PI) 
+                       + log_det 
+                       - ((t_df + d)/2.0) * log(1 + (1/t_df) * exponent);
                                    
     }
     else {
       exponent = arma::as_scalar(arma::trans(point - mu.slice(i - 1)) 
-                                   * arma::inv(variance.slice(i - 1))
-                                   * (point - mu.slice(i - 1)));
+                                 * arma::inv(variance.slice(i - 1))
+                                 * (point - mu.slice(i - 1)));
                                    
-                                   log_det = arma::log_det(variance.slice(i - 1)).real();
-                                   log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
+      log_det = arma::log_det(variance.slice(i - 1)).real();
+      log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
     }
     prob_vec(i - 1) = curr_weight + log_likelihood;
+    std::cout <<  "\nDIRICHLET:\nCluster " << i << "\nProbability: " 
+              << prob_vec(i - 1) << "\nWeight: " << exp(curr_weight) 
+              << "\nLog likelihood: " << log_likelihood << "\n\n";
   } 
   prob_vec = exp(prob_vec - max(prob_vec));
   prob_vec = prob_vec / sum(prob_vec);
@@ -1151,37 +1162,45 @@ arma::vec mdi_gauss_clust_probs(arma::uword row_index,
   
   arma::vec point = arma::trans(data.row(row_index));
   
+  common_cluster = 1 * (cluster_labels(row_index) == cluster_labels_comp(row_index));
+  
   for(arma::uword i = 1; i < k + 1; i++){
     curr_weight = log(cluster_weights(i - 1));
     
-    common_cluster = 1 * (cluster_labels(row_index) == cluster_labels_comp(row_index));
-    
-    similarity_upweight = log(1 + context_similarity * common_cluster);
+    if(i == cluster_labels(row_index)){
+      similarity_upweight = log(1 + context_similarity * common_cluster);
+    }
     
     if(outlier && i == k){
       
       exponent = arma::as_scalar(arma::trans(point - global_mean) 
-                                   * arma::inv(global_variance)
-                                   * (point - global_mean));
+                                 * arma::inv(global_variance)
+                                 * (point - global_mean));
                                    
-                                   log_det = arma::log_det(global_variance).real();
-                                   
-                                   log_likelihood = (lgamma((t_df + d)/2.0)
-                                                       - lgamma(t_df/2.0)
-                                                       + d/2.0 * log(t_df * M_PI) 
-                                                       + log_det - ((t_df + d)/2.0) * log(1 + (1/t_df) * exponent)
-                                   );
+      log_det = arma::log_det(global_variance).real();
+     
+      log_likelihood = lgamma((t_df + d)/2.0)
+                       - lgamma(t_df/2.0)
+                       + d/2.0 * log(t_df * M_PI) 
+                       + log_det 
+                       - ((t_df + d)/2.0) * log(1 + (1/t_df) * exponent);
                                    
     }
     else {
       exponent = arma::as_scalar(arma::trans(point - mu.slice(i - 1)) 
-                                   * arma::inv(variance.slice(i - 1))
-                                   * (point - mu.slice(i - 1)));
+                                 * arma::inv(variance.slice(i - 1))
+                                 * (point - mu.slice(i - 1)));
                                    
-                                   log_det = arma::log_det(variance.slice(i - 1)).real();
-                                   log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
+      log_det = arma::log_det(variance.slice(i - 1)).real();
+      log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
     }
     prob_vec(i - 1) = curr_weight + log_likelihood + similarity_upweight;
+    
+    similarity_upweight = 0.0;
+    
+    // std::cout <<  "\nGAMMA\nCluster " << i << "\nProbability: " 
+    //           << prob_vec(i - 1) << "\nWeight: " << exp(curr_weight) 
+    //           << "\nLog likelihood: " << log_likelihood << "\n\n";
   }
   
   prob_vec = exp(prob_vec - max(prob_vec));
@@ -1215,28 +1234,6 @@ arma::vec swap_cluster_weights(arma::vec cluster_weights,
   cluster_weights(label_2) = decoy_weights(label_1);
   
   return cluster_weights;
-}
-
-// log_likelihood of the model
-double log_model_likelihood(double v,
-                            double Z,
-                            arma::uword n,
-                            double context_similarity,
-                            arma::uvec cluster_labels_1,
-                            arma::uvec cluster_labels_2,
-                            arma::vec cluster_weights_1,
-                            arma::vec cluster_weights_2){
-  double score = 0.0;
-  
-  for(arma::uword i = 0; i < n; i++){
-    score += log(1 + context_similarity * (cluster_labels_1(i) == cluster_labels_2(i)))
-    + log(cluster_weights_1(cluster_labels_1(i) - 1)) 
-    + log(cluster_weights_2(cluster_labels_2(i) - 1));
-  }
-  
-  score += (n - 1) * log(v) - v * Z - log_factorial(n - 1);
-  
-  return score;
 }
 
 double comp(arma::uword n,
@@ -1297,6 +1294,13 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
   // arma::uword curr_count = 0;
   // arma::uword new_count = 0;
   
+  old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
+  
+  arma::uvec occupied_clusters;
+  occupied_clusters = arma::unique(cluster_labels_1);
+  
+  // std::cout << occupied_clusters << "\n";
+  
   // Should this be bound as the min_num_clusters or min_num_clusters - 1?
   for(arma::uword i = 0; i < num_clusters_2; i++){
     
@@ -1313,57 +1317,27 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
       new_pos++;
     }
     
-    if(i < min_num_clusters || new_pos < min_num_clusters){
+    // std::cout << "\nTruth statement: \n"
+    //           << (arma::any(occupied_clusters) == i || arma::any(occupied_clusters) == new_pos) << "\n";
+    
+    // if(arma::any(occupied_clusters) == i || arma::any(occupied_clusters) == new_pos){
+    // if(i < min_num_clusters || new_pos < min_num_clusters){
+    
+    
     
       new_labels = swap_labels(cluster_labels_2, i + 1, new_pos + 1);
       
       new_weights = swap_cluster_weights(cluster_weights_2, i, new_pos);
       
-      // new_phi = sample_phi(cluster_labels_1,
-      //                      new_labels,
-      //                      cluster_weights_1,
-      //                      new_weights,
-      //                      v,
-      //                      n,
-      //                      min_num_clusters,
-      //                      a0,
-      //                      b0);
-      
-      old_score = log_model_likelihood(v,
-                                       Z,
-                                       n,
-                                       phi,
-                                       cluster_labels_1,
-                                       cluster_labels_2,
-                                       cluster_weights_1,
-                                       cluster_weights_2);
-      
-      new_score = log_model_likelihood(v,
-                                       Z,
-                                       n,
-                                       phi,
-                                       cluster_labels_1,
-                                       new_labels,
-                                       cluster_weights_1,
-                                       new_weights);
-      
-      
-      log_accept = new_score - old_score;
-      
-      old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
       new_score = comp(n, phi, cluster_labels_1, new_labels);
-      
-      if(pow((new_score - old_score) - log_accept, 2) > 0.001){
-        std::cout << "Difference of opinion\n";
-        std::cout << "Clever: " << (new_score - old_score)
-                  << "\nFull: " << log_accept << "\n";
-      }
       
       log_accept = new_score - old_score;
       
       accept = 1.0;
       
       if(log_accept < 0){
+        // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
+        
         accept = exp(log_accept);
       }
       
@@ -1384,18 +1358,17 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
       //   << new_weights << "\n\n";
       
       if(arma::randu<double>( ) < accept){
-        
+        // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
         // std::cout << "Labels\n";
         cluster_labels_2 = new_labels;
         
         // std::cout << "Weights\n";
         cluster_weights_2 = new_weights;
         
-        // std::cout << "Phi\n\n";
-        // phi = new_phi;
+        old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
     
       }
-    }
+    // }
   }
   
   arma::vec output = arma::zeros<arma::vec>(n + num_clusters_2 + 1);
@@ -1626,6 +1599,12 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                                                    cluster_labels_categorical,
                                                    context_similarity);
     
+    
+    
+    // cluster_weights_gaussian = dirichlet_posterior(cluster_weight_priors_categorical,
+    //                                                cluster_labels_categorical,
+    //                                                num_clusters_categorical);
+    
     // cluster_weights_categorical = gamma_posterior(cluster_weight_priors_categorical,
     //                                               cluster_labels_categorical,
     //                                               num_clusters_categorical);
@@ -1682,6 +1661,13 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                                     b0);
     
     
+    
+    // if (i >= burn && (i - burn) % thinning == 0) {
+    //   std::cout << "\nGaussian weights:\n" << cluster_weights_gaussian
+    //             << "\n\nNormalising constant:\n" << Z
+    //             << "\n\nStrategic latent variable:\n" << v << "\n\n";
+    // }
+    
     // sample 
     for(arma::uword j = 0; j < n; j++){
       
@@ -1689,6 +1675,8 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
       // assignment to each cluster
       // std::cout << "Gaussian cluser prob vec next\n";
       
+      
+      // std::cout << "Gaussian weights:\n" <<  cluster_weights_gaussian << "\n\n";
       curr_gaussian_prob_vec = mdi_gauss_clust_probs(j,
                                                      gaussian_data,
                                                      num_clusters_gaussian,
@@ -1702,6 +1690,26 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                                                      global_mean,
                                                      global_variance,
                                                      t_df);
+      
+      // curr_gaussian_prob_vec = sample_gaussian_cluster(arma::trans(gaussian_data.row(j)),
+      //                                                  gaussian_data,
+      //                                                  num_clusters_gaussian,
+      //                                                  cluster_weights_gaussian,
+      //                                                  cluster_labels_gaussian,
+      //                                                  loc_mu_variance(1),
+      //                                                  loc_mu_variance(0),
+      //                                                  outlier,
+      //                                                  global_mean,
+      //                                                  global_variance,
+      //                                                  t_df);
+      
+      
+      
+      // std::cout << "Gaussian prob vec: \n" << curr_gaussian_prob_vec << "\n\n";
+      
+      // if (i >= burn && (i - burn) % thinning == 0 && (j == 1 || j == 150)) {
+      //   std::cout << "Gaussian prob vec: \n" << curr_gaussian_prob_vec << "\n\n";
+      // }
       
       // std::cout << "Categorical cluser prob vec next\n";
       
@@ -1791,6 +1799,9 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
       gaussian_record.col((i - burn) / thinning) = cluster_labels_gaussian;
       categorical_record.col((i - burn) / thinning) = cluster_labels_categorical;
       context_similarity_record((i - burn) / thinning) = context_similarity;
+      
+      // std::cout << "Gaussian prob vec: \n" << curr_gaussian_prob_vec << "\n\n";
+      // std::cout << "\nCategorical prob vec: \n" << curr_categorical_prob_vec << "\n\n";
     }
   }
   
