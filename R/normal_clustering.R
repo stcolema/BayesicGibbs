@@ -281,6 +281,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
       k,
       num_clusters_cat,
       fix_vec,
+      rep(F, N),
       num_iter,
       burn,
       thinning,
@@ -409,10 +410,17 @@ categorical_gibbs_sampling <- function(data,
 #' matrix for points.
 #'
 #' @param data A matrix of the data being analysed.
-#' #' @param cat_data Matrix of 1's and 0's used for multiple dataset integration.
+#' @param cat_data Matrix of 1's and 0's used for multiple dataset integration.
 #' @param k The number of clusters.
 #' @param class_labels A vector of unsigned integers representing the initial
-#' cluster of the corresponding point in data
+#' cluster of the corresponding point in data.
+#' @param fix_vec A vector of 1's and 0's or else bools used for semi-supervised
+#' data (use all FALSE or 0 if using an unsupervised case).
+#' @param d The number of columns in the data (if not input calculates this).
+#' @param N The number of observations in the data (defaults to the number of 
+#' rows in the data).
+#' @param fix_vec_cat A vector of the same type and length as fix_vec but used 
+#' for the categorical data - defaults to a vector of FALSEs of length N.
 #' @param num_iter The number of iterations to sample over.
 #' @param burn The number of iterations to record after (i.e. the burn-in).
 #' @param mu_0 A d-vector; prior on mean. If NULL defaults to mean of data.
@@ -422,6 +430,8 @@ categorical_gibbs_sampling <- function(data,
 #' @param lambda_0 The prior of shrinkage for mean distribution.
 #' @param concentration_0 The prior for dirichlet distribution of cluster
 #' weights.
+#' @param a_0 The prior shape for the context similarity parameter
+#' @param b_0 The prior rate for the context similarity parameter
 #' @param cluster_weight_priors_categorical Vector of the prior on cluster
 #' weights in the categorical data.
 #' @param phi_0 List of vectors, the prior on the distribution of the classes
@@ -439,33 +449,38 @@ categorical_gibbs_sampling <- function(data,
 #' @param record_posteriors A bool instructing the mcmc function to record the
 #' posterior distributions of the mean and variance for each cluster
 #' (default is FALSE)
-mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
-                               d = NULL,
-                               N = NULL,
-                               num_iter = NULL,
-                               burn = 0,
-                               mu_0 = NULL,
-                               df_0 = NULL,
-                               scale_0 = NULL,
-                               lambda_0 = 0.01,
-                               concentration_0 = 0.1,
-                               a0 = 1,
-                               b0 = 1,
-                               cluster_weight_priors_categorical = 1,
-                               phi_0 = NULL,
-                               c_clusters_label_0 = NULL,
-                               num_clusters_cat = NULL,
-                               thinning = 25,
-                               outlier = FALSE,
-                               t_df = 4.0,
-                               record_posteriors = FALSE,
-                               normalise = FALSE) {
+mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
+                                     d = NULL,
+                                     N = NULL,
+                                     fix_vec_cat = NULL,
+                                     num_iter = NULL,
+                                     burn = 0,
+                                     mu_0 = NULL,
+                                     df_0 = NULL,
+                                     scale_0 = NULL,
+                                     lambda_0 = 0.01,
+                                     concentration_0 = 0.1,
+                                     a_0 = 1,
+                                     b_0 = 1,
+                                     cluster_weight_priors_categorical = 1,
+                                     phi_0 = NULL,
+                                     c_clusters_label_0 = NULL,
+                                     num_clusters_cat = NULL,
+                                     thinning = 25,
+                                     outlier = FALSE,
+                                     t_df = 4.0,
+                                     record_posteriors = FALSE,
+                                     normalise = FALSE) {
   if (is.null(d)) {
     d <- ncol(data)
   }
 
   if (is.null(N)) {
     N <- nrow(data)
+  }
+  
+  if(is.null(fix_vec_cat)){
+    fix_vec_cat <- rep(F, N)
   }
 
 
@@ -546,8 +561,8 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
     lambda_0,
     scale_0,
     df_0,
-    a0,
-    b0,
+    a_0,
+    b_0,
     concentration_0,
     cluster_weight_priors_categorical,
     phi_0,
@@ -556,6 +571,7 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
     k,
     num_clusters_cat,
     fix_vec,
+    fix_vec_cat,
     num_iter,
     burn,
     thinning,
@@ -565,6 +581,197 @@ mdi_gibbs_sampling <- function(data, cat_data, k, class_labels, fix_vec,
     normalise
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+#' @title MDI gibbs sampling
+#' @description Carries out gibbs sampling of data and returns a similarity
+#' matrix for points.
+#'
+#' @param data A matrix of the data being analysed.
+#' @param cat_data Matrix of 1's and 0's used for multiple dataset integration.
+#' @param k The number of clusters.
+#' @param class_labels A vector of unsigned integers representing the initial
+#' cluster of the corresponding point in data.
+#' @param fix_vec A vector of 1's and 0's or else bools used for semi-supervised
+#' data (use all FALSE or 0 if using an unsupervised case).
+#' @param d The number of columns in the data (if not input calculates this).
+#' @param N The number of observations in the data (defaults to the number of 
+#' rows in the data).
+#' @param fix_vec_cat A vector of the same type and length as fix_vec but used 
+#' for the categorical data - defaults to a vector of FALSEs of length N.
+#' @param num_iter The number of iterations to sample over.
+#' @param burn The number of iterations to record after (i.e. the burn-in).
+#' @param mu_0 A d-vector; prior on mean. If NULL defaults to mean of data.
+#' @param df_0 The prior on the degrees of freedom. if NULL defaults to d + 2.
+#' @param scale_0 The prior on the scale for the Inverse Wishart. If NULL
+#' generated using an empirical method.
+#' @param lambda_0 The prior of shrinkage for mean distribution.
+#' @param concentration_0 The prior for dirichlet distribution of cluster
+#' weights.
+#' @param a_0 The prior shape for the context similarity parameter
+#' @param b_0 The prior rate for the context similarity parameter
+#' @param cluster_weight_priors_categorical Vector of the prior on cluster
+#' weights in the categorical data.
+#' @param phi_0 List of vectors, the prior on the distribution of the classes
+#' over clusters.
+#' @param c_clusters_label_0 Vector of labels for the prior clustering of the
+#' categorical data.
+#' @param num_clusters_cat Integer of the number of clusters to have as a
+#' maximum in the categorical dataset. Default is 100.
+#' @param thinning The step between iterations for which results are recorded in
+#' the mcmc output.
+#' @param outlier A bool instructing the sampler to consider an additional
+#' outlier cluster following a t-distribution
+#' @param t_df The degrees of freedom for the outlier t-distribution (default
+#' is 4)
+#' @param record_posteriors A bool instructing the mcmc function to record the
+#' posterior distributions of the mean and variance for each cluster
+#' (default is FALSE)
+mdi <- function(data_1, data_2, args_1, args_2,
+                type_1 = "Gaussian",
+                type_2 = "Categorical",
+                n_clust_1 = 50, 
+                n_clust_2 = 50,
+                labels_0_1 = NULL, 
+                labels_0_2 = NULL,
+                d = NULL,
+                N = NULL,
+                a_0 = 1,
+                b_0 = 1,
+                fix_vec_1 = NULL,
+                fix_vec_2 = NULL,
+                cluster_weight_0_1 = 0.1,
+                cluster_weight_0_2 = 1,
+                num_iter = NULL,
+                burn = 0,
+                thinning = 25) {
+  if (is.null(d)) {
+    d <- ncol(data)
+  }
+  
+  if (is.null(N)) {
+    N <- nrow(data)
+  }
+  
+  if(is.null(fix_vec_cat)){
+    fix_vec_cat <- rep(F, N)
+  }
+  
+  
+  if (is.null(num_iter)) {
+    num_iter <- min((d^2) * 1000 / sqrt(N), 10000)
+  }
+  
+  if (is.null(burn)) {
+    burn <- floor(num_iter / 10)
+  }
+  
+  if (burn > num_iter) {
+    stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
+  }
+  
+  if (thinning > (num_iter - burn)) {
+    if (thinning > (num_iter - burn) & thinning < 5 * (num_iter - burn)) {
+      stop("Thinning factor exceeds iterations feasibly recorded. Stopping.")
+    } else if (thinning > 5 * (num_iter - burn) & thinning < 10 * (num_iter - burn)) {
+      stop("Thinning factor relatively large to effective iterations. Stopping algorithm.")
+    } else {
+      warning(paste0(
+        "Thinning factor relatively large to effective iterations.",
+        "\nSome samples recorded. Continuing but please check input"
+      ))
+    }
+  }
+  
+  if (is.null(num_clusters_cat)) {
+    num_clusters_cat <- min(100, ceiling(nrow(data) / 4))
+  }
+  
+  data <- as.matrix(data)
+  
+  # Empirical Bayes
+  parameters_0 <- empirical_bayes_initialise(data, mu_0, df_0, scale_0, N, k, d)
+  
+  mu_0 <- parameters_0$mu_0
+  df_0 <- parameters_0$df_0
+  scale_0 <- parameters_0$scale_0
+  
+  if (is.null(concentration_0)) {
+    concentration_0 <- rep(0.1, (k + outlier))
+  } else if (length(concentration_0) < (k + outlier)) {
+    print(paste0(
+      "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
+      " for concentration prior."
+    ))
+    concentration_0 <- rep(concentration_0, k + outlier)
+  }
+  
+  if (is.null(cluster_weight_priors_categorical)) {
+    cluster_weight_priors_categorical <- rep(1, num_clusters_cat)
+  } else if (length(cluster_weight_priors_categorical) < num_clusters_cat) {
+    print(paste0(
+      "Creating vector of ", num_clusters_cat, " repetitions of ", cluster_weight_priors_categorical,
+      " for categorical cluster weights prior."
+    ))
+    cluster_weight_priors_categorical <- rep(cluster_weight_priors_categorical, num_clusters_cat)
+  }
+  
+  if (is.null(phi_0)) {
+    phi_0 <- phi_prior(cat_data)
+  }
+  
+  if (is.null(c_clusters_label_0)) {
+    c_clusters_label_0 <- sample(1:num_clusters_cat,
+                                 size = N,
+                                 replace = T,
+                                 prob = cluster_weight_priors_categorical
+    )
+  }
+  
+  sim <- mdi_gauss_cat(
+    data,
+    cat_data,
+    mu_0,
+    lambda_0,
+    scale_0,
+    df_0,
+    a_0,
+    b_0,
+    concentration_0,
+    cluster_weight_priors_categorical,
+    phi_0,
+    class_labels,
+    c_clusters_label_0,
+    k,
+    num_clusters_cat,
+    fix_vec,
+    fix_vec_cat,
+    num_iter,
+    burn,
+    thinning,
+    outlier,
+    t_df,
+    record_posteriors,
+    normalise
+  )
+}
+
+
+
+
+
+
+
 
 
 

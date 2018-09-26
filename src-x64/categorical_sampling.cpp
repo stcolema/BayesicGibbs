@@ -1040,8 +1040,8 @@ double sample_phi(arma::uvec cluster_labels_1,
     // std::cout << "\n\ncount same cluster:\n" <<  count_same_cluster 
     //           << "\na0:\n" << a0 << "\nbn:\n" << b << "\n";
     
-    // phi = arma::randg( arma::distr_param(pred_ind + a0, 1/b) );
-    phi = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
+    phi = arma::randg( arma::distr_param(pred_ind + a0, 1/b) );
+    // phi = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
     
   } else {
     phi = arma::randg( arma::distr_param(count_same_cluster + a0, 1/b) );
@@ -1296,8 +1296,8 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
   
   old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
   
-  arma::uvec occupied_clusters;
-  occupied_clusters = arma::unique(cluster_labels_1);
+  // arma::uvec occupied_clusters;
+  // occupied_clusters = arma::unique(cluster_labels_1);
   
   // std::cout << occupied_clusters << "\n";
   
@@ -1322,52 +1322,50 @@ arma::vec cluster_label_update(arma::uvec cluster_labels_1,
     
     // if(arma::any(occupied_clusters) == i || arma::any(occupied_clusters) == new_pos){
     // if(i < min_num_clusters || new_pos < min_num_clusters){
+  
+    new_labels = swap_labels(cluster_labels_2, i + 1, new_pos + 1);
     
+    new_weights = swap_cluster_weights(cluster_weights_2, i, new_pos);
     
+    new_score = comp(n, phi, cluster_labels_1, new_labels);
     
-      new_labels = swap_labels(cluster_labels_2, i + 1, new_pos + 1);
+    log_accept = new_score - old_score;
+    
+    accept = 1.0;
+    
+    if(log_accept < 0){
+      // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
       
-      new_weights = swap_cluster_weights(cluster_weights_2, i, new_pos);
-      
-      new_score = comp(n, phi, cluster_labels_1, new_labels);
-      
-      log_accept = new_score - old_score;
-      
-      accept = 1.0;
-      
-      if(log_accept < 0){
-        // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
-        
-        accept = exp(log_accept);
-      }
-      
-      // curr_count = count_common_cluster(cluster_labels_1,
-      //                                   cluster_labels_2,
-      //                                   n);
-      // 
-      // new_count = count_common_cluster(cluster_labels_1,
-      //                                  new_labels,
-      //                                  n);
+      accept = exp(log_accept);
+    }
+    
+    // curr_count = count_common_cluster(cluster_labels_1,
+    //                                   cluster_labels_2,
+    //                                   n);
+    // 
+    // new_count = count_common_cluster(cluster_labels_1,
+    //                                  new_labels,
+    //                                  n);
 
-      // std::cout << "Current position: " << i << "\nNew position: " << new_pos
-      //   << "\nCurrent phi: " << phi << "\nNew phi: " << new_phi
-      //   << "\nCurrent common cluster count: " << curr_count
-      //   << "\nNew common cluster count: " << new_count
-      //   << "\n\nCluster 1 weights:\n" << cluster_weights_1
-      //   << "\n\nCurrent weights:\n" << cluster_weights_2 << "\n\nNew weights:\n"
-      //   << new_weights << "\n\n";
-      
-      if(arma::randu<double>( ) < accept){
-        // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
-        // std::cout << "Labels\n";
-        cluster_labels_2 = new_labels;
-        
-        // std::cout << "Weights\n";
-        cluster_weights_2 = new_weights;
-        
-        old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
+    // std::cout << "Current position: " << i << "\nNew position: " << new_pos
+    //   << "\nCurrent phi: " << phi << "\nNew phi: " << new_phi
+    //   << "\nCurrent common cluster count: " << curr_count
+    //   << "\nNew common cluster count: " << new_count
+    //   << "\n\nCluster 1 weights:\n" << cluster_weights_1
+    //   << "\n\nCurrent weights:\n" << cluster_weights_2 << "\n\nNew weights:\n"
+    //   << new_weights << "\n\n";
     
-      }
+    if(arma::randu<double>( ) < accept){
+      // std::cout << "\nOld score: " << old_score << "\nNew score: " << new_score << "\n";
+      // std::cout << "Labels\n";
+      cluster_labels_2 = new_labels;
+      
+      // std::cout << "Weights\n";
+      cluster_weights_2 = new_weights;
+      
+      old_score = comp(n, phi, cluster_labels_1, cluster_labels_2);
+  
+    }
     // }
   }
   
@@ -1396,7 +1394,8 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                          arma::uvec cluster_labels_categorical,
                          arma::uword num_clusters_gaussian,
                          arma::uword num_clusters_categorical,
-                         std::vector<bool> fix_vec,
+                         std::vector<bool> fix_vec_1,
+                         std::vector<bool> fix_vec_2,
                          arma::uword num_iter,
                          arma::uword burn,
                          arma::uword thinning,
@@ -1727,19 +1726,17 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
       
       // update labels - in gaussian data this is only if the current point is 
       // not fixed
-      if(! fix_vec[j]){
+      if(! fix_vec_1[j]){
         // std::cout << "Gaussian\n";
         cluster_labels_gaussian(j) = cluster_predictor(curr_gaussian_prob_vec);
       }
       
-      // std::cout << "Categorical\n";
-      cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
+      if (! fix_vec_2[j]){
+        // std::cout << "Categorical\n";
+        cluster_labels_categorical(j) = cluster_predictor(curr_categorical_prob_vec);
+      }
       
     }
-    
-    
-    
-  
     
     // std::cout << "All the context update stuff\n";
     
@@ -2045,8 +2042,6 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
     
     // std::cout << "Z calculated \n";
     
-    bool data_2_unsupervised = true;
-    
     // sample the strategic latent variable, v
     v = arma::randg( arma::distr_param(n, 1/Z) );
     
@@ -2100,8 +2095,6 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
       if(! fix_vec_2[j]){
         // std::cout << "Categorical\n";
         clust_labels_2(j) = cluster_predictor(curr_prob_vec_2);
-      } else {
-        data_2_unsupervised = false;
       }
     }
     
@@ -2276,8 +2269,6 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
   
   arma::vec entropy_cw(num_iter);
   
-  bool data_2_unsupervised = true;
-  
   // std::cout << "All declared \n";
   
   
@@ -2410,8 +2401,6 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
       if(! fix_vec_2[j]){
         // std::cout << "Categorical\n";
         clust_labels_2(j) = cluster_predictor(curr_prob_vec_2);
-      } else {
-        data_2_unsupervised = false;
       }
     }
     
@@ -2419,8 +2408,6 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
     
     // std::cout << cluster_labels_categorical.n_elem << "\n"; 
     
-    // if(data_2_unsupervised){
-      
       // Update cluster labels in second dataset
       // Return the new labels, weights and similarity in a single vector
       labels_weights_phi = cluster_label_update(clust_labels_1,
