@@ -12,16 +12,16 @@ categorical_gibbs_sampling(data, fix_vec = rep(F, nrow(data)),
 \arguments{
 \item{data}{A matrix of the data being analysed.}
 
-\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
+\item{cluster_weight_priors_categorical}{Vector of the prior on cluster
 weights in the categorical data.}
 
-\item{phi_0}{List of vectors, the prior on the distribution of the classes 
+\item{phi_0}{List of vectors, the prior on the distribution of the classes
 over clusters.}
 
-\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
+\item{c_clusters_label_0}{Vector of labels for the prior clustering of the
 categorical data.}
 
-\item{num_clusters_cat}{Integer of the number of clusters to have as a 
+\item{num_clusters_cat}{Integer of the number of clusters to have as a
 maximum in the categorical dataset. Default is 100.}
 
 \item{num_iter}{The number of iterations to sample over.}

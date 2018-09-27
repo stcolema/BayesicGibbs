@@ -1521,8 +1521,8 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   arma::vec rate_0_cat(num_clusters_categorical);
   
   // Placeholder prior
-  rate_0_gauss.fill(0.2);
-  rate_0_cat.fill(0.2);
+  rate_0_gauss.fill(1);
+  rate_0_cat.fill(1);
   
   // Not sure this is sensible
   cluster_weights_gaussian = cluster_weight_priors_gaussian;
@@ -1920,6 +1920,8 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
   arma::field<arma::cube> loc_mu_variance_1(2);
   arma::field<arma::cube> loc_mu_variance_2(2);
   
+  // std::cout << "Generic message. Parameter fields declared.\n";
+  
   // Context similarity - smaple prior
   double phi = arma::randg(arma::distr_param(a0, 1/b0) );
   
@@ -1941,25 +1943,29 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
   arma::umat record_2(n, eff_count);
   record_2.zeros();
   
+  // The vector to record the context similarity parameter
   arma::vec phi_record(eff_count);
   
   arma::vec labels_weights_phi(n + n_clust_2 + 1);
   
   arma::vec entropy_cw(num_iter);
   
-  // std::cout << "All declared \n";
-  
+  // std::cout << "Entropy vec declared.\n";
   
   arma::vec rate_0_1(n_clust_1);
   arma::vec rate_0_2(n_clust_2);
   
   // Placeholder prior
-  rate_0_1.fill(0.2);
-  rate_0_2.fill(0.2);
+  rate_0_1.fill(1);
+  rate_0_2.fill(1);
+  
+  // std::cout << "Rates rated.\n";
   
   // Not sure this is sensible - simply to have non-zero numbers here
   clust_weights_1 = clust_weight_priors_1;
   clust_weights_2 = clust_weight_priors_2;
+  
+  // std::cout << "All declared \n";
   
   for(arma::uword i = 0; i < num_iter; i++){
     
@@ -1993,6 +1999,8 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
                                           clust_labels_1,
                                           phi);
     
+    // std::cout << "Sampled weights for both datasets\n";
+    
     // Entropy for graphing convergence
     entropy_cw(i) = entropy(clust_weights_1);
     
@@ -2017,6 +2025,8 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
                                                scale_0_2,
                                                lambda_0_2,
                                                mu_0_2);
+    
+    // std::cout << "Sampled parameters for both datasets\n";
     
     // sample the context similarity parameter (as only two contexts this is a
     // single double - number not a drink)
@@ -2176,7 +2186,7 @@ Rcpp::List mdi_gauss_gauss(arma::mat data_1,
   return List::create(Named("similarity_1") = sim_1,
                       Named("similarity_2") = sim_2,
                       Named("class_record_1") = record_1,
-                      Named("class_record_1") = record_2,
+                      Named("class_record_2") = record_2,
                       Named("context_similarity") = phi_record,
                       Named("entropy") = entropy_cw);
   
@@ -2276,8 +2286,8 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
   arma::vec rate_0_2(n_clust_2);
   
   // Placeholder prior
-  rate_0_1.fill(0.2);
-  rate_0_2.fill(0.2);
+  rate_0_1.fill(1);
+  rate_0_2.fill(1);
   
   // Not sure this is sensible - simply to have non-zero numbers here
   clust_weights_1 = clust_weight_priors_1;
@@ -2477,7 +2487,7 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
   return List::create(Named("similarity_1") = sim_1,
                       Named("similarity_2") = sim_2,
                       Named("class_record_1") = record_1,
-                      Named("class_record_1") = record_2,
+                      Named("class_record_2") = record_2,
                       Named("context_similarity") = phi_record,
                       Named("entropy") = entropy_cw);
   

@@ -39,16 +39,16 @@ weights.}
 \item{cat_data}{Matrix of 1's and 0's used for multiple dataset integration,
 Default is NULL in which case a generic mixture of Gaussians is used.}
 
-\item{cluster_weight_priors_categorical}{Vector of the prior on cluster 
+\item{cluster_weight_priors_categorical}{Vector of the prior on cluster
 weights in the categorical data.}
 
-\item{phi_0}{List of vectors, the prior on the distribution of the classes 
+\item{phi_0}{List of vectors, the prior on the distribution of the classes
 over clusters.}
 
-\item{c_clusters_label_0}{Vector of labels for the prior clustering of the 
+\item{c_clusters_label_0}{Vector of labels for the prior clustering of the
 categorical data.}
 
-\item{num_clusters_cat}{Integer of the number of clusters to have as a 
+\item{num_clusters_cat}{Integer of the number of clusters to have as a
 maximum in the categorical dataset. Default is 100.}
 
 \item{num_iter}{The number of iterations to sample over.}
@@ -89,7 +89,7 @@ returned. If below this predicted class is NA.}
 posterior distributions of the mean and variance for each cluster
 (default is FALSE)}
 
-\item{normalise}{Bool instructing normalisation of continuous data (default 
+\item{normalise}{Bool instructing normalisation of continuous data (default
 is false)}
 
 \item{train:}{instruction to include all data (NULL), labelled data (TRUE) or
