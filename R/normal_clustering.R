@@ -870,7 +870,7 @@ mdi <- function(data_1, data_2, args_1, args_2,
 #' @param lambda_0 A positive real number; the shrinkage prior for the mean.
 #' @param df_0 An integer. The degrees of freedom used in the inverse Wishart 
 #' distribution from which the variance is sampled. If NULL defaults to d + 2.
-#' @example 
+#' @examples 
 #' args <- gaussian_arguments(data, 5)
 #' @return A named list ready to be used as input into the MDI function.
 gaussian_arguments <- function(data, n_clust,

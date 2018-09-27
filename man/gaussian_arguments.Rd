@@ -35,3 +35,6 @@ single object appropriate for input into the MDI function. If values are not
 given the priors are generated using an empirical method (hence the need for
 inputting the data and the number of clusters).
 }
+\examples{
+args <- gaussian_arguments(data, 5)
+}

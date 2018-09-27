@@ -7,9 +7,11 @@
 mdi(data_1, data_2, args_1, args_2, type_1 = "Gaussian",
   type_2 = "Categorical", n_clust_1 = 50, n_clust_2 = 50,
   labels_0_1 = NULL, labels_0_2 = NULL, d = NULL, N = NULL,
-  a_0 = 1, b_0 = 1, fix_vec_1 = NULL, fix_vec_2 = NULL,
+  a_0 = 1, b_0 = 0.2, fix_vec_1 = NULL, fix_vec_2 = NULL,
   cluster_weight_0_1 = 0.1, cluster_weight_0_2 = 1, num_iter = NULL,
-  burn = 0, thinning = 25)
+  burn = NULL, thinning = 25, outlier_1 = FALSE, t_df_1 = 4,
+  normalise_1 = FALSE, outlier_2 = FALSE, t_df_2 = 4,
+  normalise_2 = FALSE, record_posteriors = FALSE)
 }
 \arguments{
 \item{data_1}{A matrix of the data being analysed (context 1).}
