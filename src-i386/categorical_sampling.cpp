@@ -741,9 +741,9 @@ arma::vec sample_gaussian_cluster(arma::vec point,
       log_likelihood = -0.5 *(log_det + exponent + d * log(2 * M_PI));
     }
     prob_vec(i - 1) = curr_weight + log_likelihood;
-    std::cout <<  "\nDIRICHLET:\nCluster " << i << "\nProbability: " 
-              << prob_vec(i - 1) << "\nWeight: " << exp(curr_weight) 
-              << "\nLog likelihood: " << log_likelihood << "\n\n";
+    // std::cout <<  "\nDIRICHLET:\nCluster " << i << "\nProbability: " 
+    //           << prob_vec(i - 1) << "\nWeight: " << exp(curr_weight) 
+    //           << "\nLog likelihood: " << log_likelihood << "\n\n";
   } 
   prob_vec = exp(prob_vec - max(prob_vec));
   prob_vec = prob_vec / sum(prob_vec);

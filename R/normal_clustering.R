@@ -14,7 +14,8 @@ prepare_cat_data <- function(data) {
     lapply(as.factor) %>%
     lapply(as.numeric) %>%
     do.call(rbind, .) %>%
-    "-"(1)
+    "-"(1) %>%
+    t()
 }
 
 
@@ -601,14 +602,14 @@ mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
 #'
 #' @param data_1 A matrix of the data being analysed (context 1).
 #' @param data_2 A matrix of the data being analysed (context 2).
-#' @param args_1 A named list. The output of either Gaussian arguments or 
-#' Categorical arguments dpending on the type of data_1, containing the relevant 
+#' @param args_1 A named list. The output of either Gaussian arguments or
+#' Categorical arguments dpending on the type of data_1, containing the relevant
 #' priors.
-#' @param args_2 A named list similar to args_1 corrected for the relevant type 
+#' @param args_2 A named list similar to args_1 corrected for the relevant type
 #' of data_2.
-#' @param type_1 A string, one of "Gaussian" or "Categorical" instructing the 
+#' @param type_1 A string, one of "Gaussian" or "Categorical" instructing the
 #' function which MDI comparison to use for data_1.
-#' @param type_2 A string similar to type_1, one of "Gaussian" or "Categorical" 
+#' @param type_2 A string similar to type_1, one of "Gaussian" or "Categorical"
 #' instructing the function which MDI comparison to use for data_2.
 #' @param n_clust_1 The number of clusters to use for data_1.
 #' @param n_clust_2 The number of clusters to use for data_2.
@@ -621,7 +622,7 @@ mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
 #' rows in the data).
 #' @param a_0 The prior shape for the context similarity parameter.
 #' @param b_0 The prior rate for the context similarity parameter.
-#' @param fix_vec_1 A vector of 1's and 0's or else bools used for 
+#' @param fix_vec_1 A vector of 1's and 0's or else bools used for
 #' semi-supervised data (use all FALSE or 0 if using an unsupervised case).
 #' @param fix_vec_2 A vector of the same type and length as fix_vec but used
 #' for the categorical data - defaults to a vector of FALSEs of length N.
@@ -634,12 +635,12 @@ mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
 #' @param thinning The step between iterations for which results are recorded in
 #' the mcmc output.
 #' @param outlier_1 A bool instructing the sampler to consider an additional
-#' outlier cluster following a t-distribution for data_1 (only relevant if 
+#' outlier cluster following a t-distribution for data_1 (only relevant if
 #' type_1 is "Gaussian").
 #' @param t_df_1 The degrees of freedom for the outlier t-distribution (default
 #' is 4).
 #' @param outlier_2 A bool instructing the sampler to consider an additional
-#' outlier cluster following a t-distribution for data_2 (only relevant if 
+#' outlier cluster following a t-distribution for data_2 (only relevant if
 #' type_2 is "Gaussian").
 #' @param t_df_2 The degrees of freedom for the outlier t-distribution (default
 #' is 4).
@@ -672,9 +673,9 @@ mdi <- function(data_1, data_2, args_1, args_2,
                 t_df_2 = 4.0,
                 normalise_2 = FALSE,
                 record_posteriors = FALSE) {
-  
+
   # Calculate all the relevant parameters
-  
+
   # Dimensionality
   if (is.null(d)) {
     d <- ncol(data_1)
@@ -685,11 +686,15 @@ mdi <- function(data_1, data_2, args_1, args_2,
     N <- nrow(data_1)
   }
 
+  if (N != nrow(data_2)) {
+    stop("Unequal number of observations in datasets. Incomparable.\nStopping.")
+  }
+
   # Vector of bools indicating labelling is not meaningful
   if (is.null(fix_vec_1)) {
     fix_vec_1 <- rep(F, N)
   }
-  
+
   if (is.null(fix_vec_2)) {
     fix_vec_2 <- rep(F, N)
   }
@@ -742,17 +747,17 @@ mdi <- function(data_1, data_2, args_1, args_2,
     )
   }
 
-  
+
   # Call the relevant MDI function
-  if((type_1 == "Gaussian" | type_1 == "G") 
-     & (type_2 == "Categorical" | type_2 == "C")){
+  if ((type_1 == "Gaussian" | type_1 == "G")
+  & (type_2 == "Categorical" | type_2 == "C")) {
     mu_0 <- args_1$mu_0
     df_0 <- args_1$df_0
     scale_0 <- args_1$scale_0
     lambda_0 <- args_1$lambda_0
-    
+
     phi_0 <- args_2$phi
-    
+
     sim <- mdi_gauss_cat(
       data_1,
       data_2,
@@ -779,12 +784,11 @@ mdi <- function(data_1, data_2, args_1, args_2,
       record_posteriors,
       normalise_1
     )
-  } else if((type_1 == "Categorical" | type_1 == "C") 
-            & (type_2 == "Categorical" | type_2 == "C")){
-    
+  } else if ((type_1 == "Categorical" | type_1 == "C")
+  & (type_2 == "Categorical" | type_2 == "C")) {
     phi_0_1 <- args_1$phi
     phi_0_2 <- args_2$phi
-    
+
     sim <- mdi_cat_cat(
       data_1,
       data_2,
@@ -804,19 +808,18 @@ mdi <- function(data_1, data_2, args_1, args_2,
       burn,
       thinning
     )
-  } else if((type_1 == "Gaussian" | type_1 == "G") 
-            & (type_2 == "Gaussian" | type_2 == "G")){
-    
+  } else if ((type_1 == "Gaussian" | type_1 == "G")
+  & (type_2 == "Gaussian" | type_2 == "G")) {
     mu_0_1 <- args_1$mu_0
     df_0_1 <- args_1$df_0
     scale_0_1 <- args_1$scale_0
     lambda_0_1 <- args_1$lambda_0
-    
+
     mu_0_2 <- args_2$mu_0
     df_0_2 <- args_2$df_0
     scale_0_2 <- args_2$scale_0
     lambda_0_2 <- args_2$lambda_0
-    
+
     sim <- mdi_gauss_gauss(
       data_1,
       data_2,
@@ -854,25 +857,25 @@ mdi <- function(data_1, data_2, args_1, args_2,
 }
 
 #' @title Gaussian arguments
-#' @description Creates a named list of the priors required for a mixture of 
-#' Gaussians. If the user provides values the function will wrap them in a 
-#' single object appropriate for input into the MDI function. If values are not 
+#' @description Creates a named list of the priors required for a mixture of
+#' Gaussians. If the user provides values the function will wrap them in a
+#' single object appropriate for input into the MDI function. If values are not
 #' given the priors are generated using an empirical method (hence the need for
 #' inputting the data and the number of clusters).
 #' @param data A matrix of continuous values.
-#' @param n_clust A unsigned integer; the number of clusters to be used in the 
+#' @param n_clust A unsigned integer; the number of clusters to be used in the
 #' clustering method.
-#' @param mu_0 A d-vector where d is the number of columns in data representing 
-#' the prior beliefs about the mean for data. Defaults to the mean of data if 
+#' @param mu_0 A d-vector where d is the number of columns in data representing
+#' the prior beliefs about the mean for data. Defaults to the mean of data if
 #' given value is NULL.
 #' @param scale_0 A positive definite matrix. The prior for the scale parameter
 #' of the inverse wishart distribution; if NULL defaults to a diagonal matrix.
 #' @param lambda_0 A positive real number; the shrinkage prior for the mean.
-#' @param df_0 An integer. The degrees of freedom used in the inverse Wishart 
+#' @param df_0 An integer. The degrees of freedom used in the inverse Wishart
 #' distribution from which the variance is sampled. If NULL defaults to d + 2.
-#' @examples 
-#' args <- gaussian_arguments(data, 5)
 #' @return A named list ready to be used as input into the MDI function.
+#' @examples
+#' args <- gaussian_arguments(data, 5)
 gaussian_arguments <- function(data, n_clust,
                                mu_0 = NULL,
                                scale_0 = NULL,
@@ -893,11 +896,11 @@ gaussian_arguments <- function(data, n_clust,
 }
 
 #' @title Categorical arguments
-#' @description Creates a named list of the priors required for a mixture of 
+#' @description Creates a named list of the priors required for a mixture of
 #' Dirichlets. The priors are generated using an empirical method (hence the
 #' need for inputting the data and the number of clusters).
 #' @param data A matrix of continuous values.
-#' @param n_clust A unsigned integer; the number of clusters to be used in the 
+#' @param n_clust A unsigned integer; the number of clusters to be used in the
 #' clustering method.
 #' @return A named list ready to be used as input into the MDI function.
 categorical_arguments <- function(data, n_clust) {
@@ -906,7 +909,7 @@ categorical_arguments <- function(data, n_clust) {
 }
 
 #' @title Thinning warning
-#' @description Generates an error or warning if the relative values of 
+#' @description Generates an error or warning if the relative values of
 #' thinning, num_iter and burn (the arguments controlling the number of recorded
 #' MCMC samples) are strange.
 #' @return None.
@@ -927,7 +930,7 @@ thinning_warning <- function(thinning, num_iter, burn) {
 
 #' @title Declare cluster weights
 #' @description Creates a vector for the mass parameter for cluster weights.
-#' @param n_clust A unsigned integer; the number of clusters to be used in the 
+#' @param n_clust A unsigned integer; the number of clusters to be used in the
 #' clustering method.
 #' @param weight_0 One of an int or a p-vector where p = n_clust. If an int
 #' defaults to a p-vector of p repetitions of said int.
