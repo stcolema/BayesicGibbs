@@ -129,8 +129,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // gaussian_clustering
-Rcpp::List gaussian_clustering(arma::uword num_iter, arma::vec concentration_0, arma::mat scale_0, arma::uvec class_labels, std::vector<bool> fix_vec, arma::vec mu_0, double lambda_0, arma::mat data, int df_0, arma::uword k, arma::uword burn, arma::uword thinning, bool outlier, double t_df, bool record_posteriors, bool normalise);
-RcppExport SEXP _BayesicGibbs_gaussian_clustering(SEXP num_iterSEXP, SEXP concentration_0SEXP, SEXP scale_0SEXP, SEXP class_labelsSEXP, SEXP fix_vecSEXP, SEXP mu_0SEXP, SEXP lambda_0SEXP, SEXP dataSEXP, SEXP df_0SEXP, SEXP kSEXP, SEXP burnSEXP, SEXP thinningSEXP, SEXP outlierSEXP, SEXP t_dfSEXP, SEXP record_posteriorsSEXP, SEXP normaliseSEXP) {
+Rcpp::List gaussian_clustering(arma::uword num_iter, arma::vec concentration_0, arma::mat scale_0, arma::uvec class_labels, arma::uvec fix_vec, arma::vec mu_0, double lambda_0, arma::mat data, int df_0, arma::uword k, arma::uword burn, arma::uword thinning, bool outlier, double t_df, bool record_posteriors, bool normalise, double u, double v);
+RcppExport SEXP _BayesicGibbs_gaussian_clustering(SEXP num_iterSEXP, SEXP concentration_0SEXP, SEXP scale_0SEXP, SEXP class_labelsSEXP, SEXP fix_vecSEXP, SEXP mu_0SEXP, SEXP lambda_0SEXP, SEXP dataSEXP, SEXP df_0SEXP, SEXP kSEXP, SEXP burnSEXP, SEXP thinningSEXP, SEXP outlierSEXP, SEXP t_dfSEXP, SEXP record_posteriorsSEXP, SEXP normaliseSEXP, SEXP uSEXP, SEXP vSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -138,7 +138,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type concentration_0(concentration_0SEXP);
     Rcpp::traits::input_parameter< arma::mat >::type scale_0(scale_0SEXP);
     Rcpp::traits::input_parameter< arma::uvec >::type class_labels(class_labelsSEXP);
-    Rcpp::traits::input_parameter< std::vector<bool> >::type fix_vec(fix_vecSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type fix_vec(fix_vecSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type mu_0(mu_0SEXP);
     Rcpp::traits::input_parameter< double >::type lambda_0(lambda_0SEXP);
     Rcpp::traits::input_parameter< arma::mat >::type data(dataSEXP);
@@ -150,7 +150,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type t_df(t_dfSEXP);
     Rcpp::traits::input_parameter< bool >::type record_posteriors(record_posteriorsSEXP);
     Rcpp::traits::input_parameter< bool >::type normalise(normaliseSEXP);
-    rcpp_result_gen = Rcpp::wrap(gaussian_clustering(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors, normalise));
+    Rcpp::traits::input_parameter< double >::type u(uSEXP);
+    Rcpp::traits::input_parameter< double >::type v(vSEXP);
+    rcpp_result_gen = Rcpp::wrap(gaussian_clustering(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors, normalise, u, v));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -309,7 +311,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_BayesicGibbs_categorical_cluster_probabilities", (DL_FUNC) &_BayesicGibbs_categorical_cluster_probabilities, 6},
     {"_BayesicGibbs_cluster_predictor", (DL_FUNC) &_BayesicGibbs_cluster_predictor, 1},
     {"_BayesicGibbs_categorical_clustering", (DL_FUNC) &_BayesicGibbs_categorical_clustering, 9},
-    {"_BayesicGibbs_gaussian_clustering", (DL_FUNC) &_BayesicGibbs_gaussian_clustering, 16},
+    {"_BayesicGibbs_gaussian_clustering", (DL_FUNC) &_BayesicGibbs_gaussian_clustering, 18},
     {"_BayesicGibbs_mdi_gauss_cat", (DL_FUNC) &_BayesicGibbs_mdi_gauss_cat, 24},
     {"_BayesicGibbs_mdi_gauss_gauss", (DL_FUNC) &_BayesicGibbs_mdi_gauss_gauss, 30},
     {"_BayesicGibbs_mdi_cat_cat", (DL_FUNC) &_BayesicGibbs_mdi_cat_cat, 17},

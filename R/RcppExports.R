@@ -37,8 +37,8 @@ categorical_clustering <- function(data, phi_prior, cluster_labels, fix_vec, clu
     .Call(`_BayesicGibbs_categorical_clustering`, data, phi_prior, cluster_labels, fix_vec, cluster_weight_priors, num_clusters, num_iter, burn, thinning)
 }
 
-gaussian_clustering <- function(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE, normalise = FALSE) {
-    .Call(`_BayesicGibbs_gaussian_clustering`, num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors, normalise)
+gaussian_clustering <- function(num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE, normalise = FALSE, u = 2, v = 10) {
+    .Call(`_BayesicGibbs_gaussian_clustering`, num_iter, concentration_0, scale_0, class_labels, fix_vec, mu_0, lambda_0, data, df_0, k, burn, thinning, outlier, t_df, record_posteriors, normalise, u, v)
 }
 
 mdi_gauss_cat <- function(gaussian_data, categorical_data, mu_0, lambda_0, scale_0, df_0, a0, b0, cluster_weight_priors_gaussian, cluster_weight_priors_categorical, phi_prior, cluster_labels_gaussian, cluster_labels_categorical, num_clusters_gaussian, num_clusters_categorical, fix_vec_1, fix_vec_2, num_iter, burn, thinning, outlier = FALSE, t_df = 4.0, record_posteriors = FALSE, normalise = FALSE) {

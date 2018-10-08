@@ -10,7 +10,7 @@ thinning_warning(thinning, num_iter, burn)
 None.
 }
 \description{
-Generates an error or warning if the relative values of 
+Generates an error or warning if the relative values of
 thinning, num_iter and burn (the arguments controlling the number of recorded
 MCMC samples) are strange.
 }

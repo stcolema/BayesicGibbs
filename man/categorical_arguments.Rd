@@ -9,14 +9,14 @@ categorical_arguments(data, n_clust)
 \arguments{
 \item{data}{A matrix of continuous values.}
 
-\item{n_clust}{A unsigned integer; the number of clusters to be used in the 
+\item{n_clust}{A unsigned integer; the number of clusters to be used in the
 clustering method.}
 }
 \value{
 A named list ready to be used as input into the MDI function.
 }
 \description{
-Creates a named list of the priors required for a mixture of 
+Creates a named list of the priors required for a mixture of
 Dirichlets. The priors are generated using an empirical method (hence the
 need for inputting the data and the number of clusters).
 }

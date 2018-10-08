@@ -113,6 +113,23 @@ empirical_bayes_gaussian <- function(data, mu_0, df_0, scale_0, N, k, d,
   return(parameters)
 }
 
+#' @title Cluster weight prior
+#' @description Produces a vector of prior weights for clusters
+#'
+cluster_weight_prior <- function(train_data, outlier = FALSE){
+  weights <- train_data %>% 
+    table %>% 
+    unname %>% 
+    lapply("/", nrow(.)) %>% 
+    unlist
+  
+  if(outlier){
+    weights <- c(weights, mean(weights))
+  }
+  
+  weights
+}
+
 #' @title Gibbs sampling
 #' @description Carries out gibbs sampling of data and returns a similarity matrix for points
 #'
@@ -157,7 +174,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
                            df_0 = NULL,
                            scale_0 = NULL,
                            lambda_0 = 0.01,
-                           concentration_0 = 0.1,
+                           concentration_0 = NULL,
                            a0 = 1.0,
                            b0 = 0.2,
                            cat_data = NULL,
@@ -213,15 +230,22 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
   df_0 <- parameters_0$df_0
   scale_0 <- parameters_0$scale_0
 
-  if (is.null(concentration_0)) {
-    concentration_0 <- rep(0.1, (k + outlier))
-  } else if (length(concentration_0) < (k + outlier)) {
-    print(paste0(
-      "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
-      " for concentration prior."
-    ))
-    concentration_0 <- rep(concentration_0, k + outlier)
-  }
+  
+  # # Prior on mass parameter for cluster  weights
+  # if (is.null(concentration_0)) {
+  #   if(is.null(train) | isTRUE(train)){
+  #     concentration_0 <- cluster_weight_prior(mydata$markers, outlier = outlier)
+  #   } else {
+  #     concentration_0 <- rep(0.1, k + outlier)
+  #   }
+  # concentration_0 <- rep(0.1, (k + outlier))
+  # } else if (length(concentration_0) < (k + outlier)) {
+  #   print(paste0(
+  #     "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
+  #     " for concentration prior."
+  #   ))
+  #   concentration_0 <- rep(concentration_0, k + outlier)
+  # }
 
   if (!is.null(cat_data)) {
     if (is.null(cluster_weight_priors_categorical)) {
@@ -264,7 +288,9 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
       outlier,
       t_df,
       record_posteriors,
-      normalise
+      normalise,
+      2,
+      10
     )
   } else {
     sim <- mdi_gauss_cat(
@@ -1021,6 +1047,7 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 
       annotation_row <- sorted_data %>%
         dplyr::select(one_of(names(annotation_row)))
+      
       rownames(annotation_row) <- rownames(input_data)
 
       dissim <- sorted_data %>%
@@ -1030,6 +1057,11 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
         arrange(!!sort_by_col)
     }
 
+    rownames(dissim) <- rownames(input_data)
+  } 
+  
+  if(!is.null(annotation_row)){
+    rownames(annotation_row) <- rownames(input_data)
     rownames(dissim) <- rownames(input_data)
   }
 
@@ -1088,6 +1120,80 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
     )
   }
   return(heat_map)
+}
+
+
+#' @title Pheatmap cluster by col
+#' @description Returns and prints an annotated pheatmap sorted by a given 
+#' column of the annotation data frame with clustering occuring within the 
+#' levels of said column
+#'
+#' @param num_data A matrix of data to be heat mapped. Needs column and
+#' rownames.
+#' @param annotation_row A data frame of the annotation variable(s). Names must
+#' match with input_data. If NULL returns normal pheatmap.
+#' @param sort_col The name of the column to sort input_data and
+#' annotation_row by when heatmapping. If pheatmap is instructed to sort_rows
+#' this has no impact.
+#' @param main The default title for the heatmap
+#' @param ... The usual inputs for pheatmap.
+#' @return An annotated pheatmap from the pheatmap package
+
+pheatmap_cluster_by_col <- function(num_data, annotation_row, sort_col,
+                                    main = "sense_check",
+                                    ...){
+  
+  # Enclose the column name using tidy evaluation
+  sort_col <- enquo(sort_col)
+  
+  # Arrange the annotation data frame based on the sort column
+  annotation_row <- annotation_row %>% 
+    dplyr::arrange(!!sort_col)
+  
+  # Select the sort column to find the location for the gaps
+  col_of_interest <- annotation_row %>% 
+    dplyr::select(!!sort_col)
+  
+  # Create the gaps - dplyr ensures the rownames are as expected (arrange resets
+  # the first row to row 1 whereas order keeps the rownames as they originally 
+  # were - Hadley hates rownames, and rightly so)
+  gaps <- as.numeric(row.names(unique(col_of_interest))) - 1
+  
+  # Create an empty vector to hold the new ordering
+  ordering <- c()
+  
+  # Create a new gap variable including the end point of the data frame
+  loc_gapping <- c(gaps, nrow(num_data))
+  
+  # Iterate over the data frame clustering the points between gaps
+  for(i in 2:length(loc_gapping)){
+    # Cluster the points in the current gap
+    hc <- hclust(dist(num_data[(loc_gapping[i - 1] + 1):loc_gapping[i],]) ^ 2, "cen")
+    
+    # Update the order from hclust to match the position in the original data frame
+    curr_order <- loc_gapping[i - 1] + hc$order
+    
+    # Add the local ordering to the global ordering
+    ordering <- c(ordering, curr_order)
+  }
+  
+  # Update the data and annotation data frames ordering
+  num_data <- num_data[ordering,]
+  annotation_row <- annotation_row[ordering,]
+  
+  num_col_gaps <- ncol(num_data) - 1
+  col_gaps <- 1:num_col_gaps
+  
+  # Heatmap
+  annotated_heatmap(num_data, annotation_row,
+                    main = main,
+                    cluster_row = FALSE,
+                    cluster_cols = FALSE,
+                    gaps_row = gaps,
+                    gaps_col = col_gaps,
+                    ...
+  )
+  
 }
 
 # === Wrapper ==================================================================
@@ -1192,7 +1298,7 @@ mcmc_out <- function(MS_object,
                      df_0 = NULL,
                      scale_0 = NULL,
                      lambda_0 = 0.01,
-                     concentration_0 = 0.1,
+                     concentration_0 = NULL,
                      cat_data = NULL,
                      cluster_weight_priors_categorical = 1,
                      phi_0 = NULL,
@@ -1255,8 +1361,14 @@ mcmc_out <- function(MS_object,
     outlier_row <- data.frame(Class = c("Outlier"), Class_key = c(k + 1))
     class_labels_key <- suppressWarnings(bind_rows(class_labels_key, outlier_row))
   }
-
-  class_labels_0 <- cluster_label_prior(class_labels_0, nk, train, MS_object, k, N)
+  
+  # if(outlier){
+  # fixed_labels <- as.numeric(fData(markerMSnSet(MS_object))[, "markers"])
+  # unfixed_labels <- rep(k + outlier, N - length(fixed_labels))
+  # class_labels_0 <- c(fixed_labels, unfixed_labels)
+  # } else {
+    class_labels_0 <- cluster_label_prior(class_labels_0, nk, train, MS_object, k, N)
+  # }
 
 
   if (is.null(num_iter)) {
@@ -1283,6 +1395,23 @@ mcmc_out <- function(MS_object,
       ))
     }
   }
+  
+  # Prior on mass parameter for cluster  weights
+  if (is.null(concentration_0)) {
+    if(is.null(train) | isTRUE(train)){
+      concentration_0 <- cluster_weight_prior(mydata$markers, outlier = outlier)
+    } else {
+      concentration_0 <- rep(0.1, k + outlier)
+    }
+    concentration_0 <- rep(0.1, (k + outlier))
+  } else if (length(concentration_0) < (k + outlier)) {
+    print(paste0(
+      "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
+      " for concentration prior."
+    ))
+    concentration_0 <- rep(concentration_0, k + outlier)
+  }
+  
   gibbs <- gibbs_sampling(num_data, k, class_labels_0, fix_vec,
     d = d,
     N = N,
@@ -1467,15 +1596,17 @@ MS_dataset <- function(MS_object, train = NULL) {
     train = TRUE
   )
 
-  fixed <- rep(TRUE, nrow(mydata_labels))
-
+  # fixed <- rep(TRUE, nrow(mydata_labels))
+  fixed <- rep(1, nrow(mydata_labels))
+  
   mydata_no_labels <- pRoloc:::subsetAsDataFrame(
     object = MS_object,
     fcol = "markers",
     train = FALSE
   )
 
-  not_fixed <- rep(FALSE, nrow(mydata_no_labels))
+  # not_fixed <- rep(FALSE, nrow(mydata_no_labels))
+  not_fixed <- rep(0, nrow(mydata_no_labels))
 
   nk <- tabulate(fData(markerMSnSet(MS_object))[, "markers"])
 
@@ -1528,11 +1659,6 @@ cluster_label_prior <- function(class_labels_0,
         prob = class_weights
       ))
 
-
-      # class_labels_0 <- c(fixed_labels, sample(1:k, nrow(mydata_no_labels),
-      #                                          replace = T,
-      #                                          prob = class_weights
-      # ))
     } else if (isTRUE(train)) {
       class_labels_0 <- as.numeric(fData(markerMSnSet(MS_object))[, "markers"])
     } else {

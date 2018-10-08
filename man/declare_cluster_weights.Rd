@@ -7,7 +7,7 @@
 declare_cluster_weights(n_clust, weight_0 = 0.1, outlier = FALSE)
 }
 \arguments{
-\item{n_clust}{A unsigned integer; the number of clusters to be used in the 
+\item{n_clust}{A unsigned integer; the number of clusters to be used in the
 clustering method.}
 
 \item{weight_0}{One of an int or a p-vector where p = n_clust. If an int

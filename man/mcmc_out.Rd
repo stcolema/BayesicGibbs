@@ -5,7 +5,7 @@
 \title{MCMC out}
 \usage{
 mcmc_out(MS_object, class_labels_0 = NULL, mu_0 = NULL, df_0 = NULL,
-  scale_0 = NULL, lambda_0 = 0.01, concentration_0 = 0.1,
+  scale_0 = NULL, lambda_0 = 0.01, concentration_0 = NULL,
   cat_data = NULL, cluster_weight_priors_categorical = 1,
   phi_0 = NULL, c_clusters_label_0 = NULL, num_clusters_cat = 100,
   train = NULL, num_iter = NULL, burn = NULL, thinning = 25,

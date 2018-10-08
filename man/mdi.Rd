@@ -18,17 +18,17 @@ mdi(data_1, data_2, args_1, args_2, type_1 = "Gaussian",
 
 \item{data_2}{A matrix of the data being analysed (context 2).}
 
-\item{args_1}{A named list. The output of either Gaussian arguments or 
-Categorical arguments dpending on the type of data_1, containing the relevant 
+\item{args_1}{A named list. The output of either Gaussian arguments or
+Categorical arguments dpending on the type of data_1, containing the relevant
 priors.}
 
-\item{args_2}{A named list similar to args_1 corrected for the relevant type 
+\item{args_2}{A named list similar to args_1 corrected for the relevant type
 of data_2.}
 
-\item{type_1}{A string, one of "Gaussian" or "Categorical" instructing the 
+\item{type_1}{A string, one of "Gaussian" or "Categorical" instructing the
 function which MDI comparison to use for data_1.}
 
-\item{type_2}{A string similar to type_1, one of "Gaussian" or "Categorical" 
+\item{type_2}{A string similar to type_1, one of "Gaussian" or "Categorical"
 instructing the function which MDI comparison to use for data_2.}
 
 \item{n_clust_1}{The number of clusters to use for data_1.}
@@ -50,7 +50,7 @@ rows in the data).}
 
 \item{b_0}{The prior rate for the context similarity parameter.}
 
-\item{fix_vec_1}{A vector of 1's and 0's or else bools used for 
+\item{fix_vec_1}{A vector of 1's and 0's or else bools used for
 semi-supervised data (use all FALSE or 0 if using an unsupervised case).}
 
 \item{fix_vec_2}{A vector of the same type and length as fix_vec but used
@@ -70,14 +70,14 @@ weights in the categorical data.}
 the mcmc output.}
 
 \item{outlier_1}{A bool instructing the sampler to consider an additional
-outlier cluster following a t-distribution for data_1 (only relevant if 
+outlier cluster following a t-distribution for data_1 (only relevant if
 type_1 is "Gaussian").}
 
 \item{t_df_1}{The degrees of freedom for the outlier t-distribution (default
 is 4).}
 
 \item{outlier_2}{A bool instructing the sampler to consider an additional
-outlier cluster following a t-distribution for data_2 (only relevant if 
+outlier cluster following a t-distribution for data_2 (only relevant if
 type_2 is "Gaussian").}
 
 \item{t_df_2}{The degrees of freedom for the outlier t-distribution (default
