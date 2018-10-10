@@ -747,13 +747,11 @@ mdi <- function(data_1, data_2, args_1, args_2,
 
   # Declare the cluster weights if not declared in advance
   cluster_weight_0_1 <- declare_cluster_weights(n_clust_1,
-    weight_0 = cluster_weight_0_1,
-    outlier = outlier_1
+    weight_0 = cluster_weight_0_1
   )
 
   cluster_weight_0_2 <- declare_cluster_weights(n_clust_2,
-    weight_0 = cluster_weight_0_2,
-    outlier = outlier_2
+    weight_0 = cluster_weight_0_2
   )
 
   # Generate random labels if not declared in advance
@@ -962,13 +960,13 @@ thinning_warning <- function(thinning, num_iter, burn) {
 #' defaults to a p-vector of p repetitions of said int.
 #' @return A vector of values to be used as the mass parameters for the weights
 #' for the clusters.
-declare_cluster_weights <- function(n_clust, weight_0 = 0.1, outlier = FALSE) {
-  if (length(weight_0) < (n_clust + outlier)) {
+declare_cluster_weights <- function(n_clust, weight_0 = 0.1) {
+  if (length(weight_0) < n_clust) {
     print(paste0(
-      "Creating vector of ", n_clust + outlier, " repetitions of ", weight_0,
+      "Creating vector of ", n_clust, " repetitions of ", weight_0,
       " for mass parameter prior."
     ))
-    weight_0 <- rep(weight_0, n_clust + outlier)
+    weight_0 <- rep(weight_0, n_clust)
   }
   weight_0
 }
@@ -1036,28 +1034,54 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 
     # sort_col <- enquo(sort_by_col)
 
+    # Declare row names ro ensure re-ordered correctly
+    row_names <- data.frame(Names = row.names(annotation_row))
+    
+    # Select the column of interest
     col_of_interest <- annotation_row %>%
       dplyr::select(!!sort_by_col)
 
     if (!is.null(annotation_row)) {
-      combined_data <- bind_cols(dissim, annotation_row)
+      # Combine the datasets to ensure all have common ordering
+      combined_data <- bind_cols(dissim, annotation_row, row_names)
 
+      # Arrange based on the user selected columm
       sorted_data <- combined_data %>%
         arrange(!!sort_by_col)
 
+      # Separate out the dataframes
       annotation_row <- sorted_data %>%
         dplyr::select(one_of(names(annotation_row)))
       
-      rownames(annotation_row) <- rownames(input_data)
+      row_names <- combined_data %>% 
+        dplyr::select(Names)
 
       dissim <- sorted_data %>%
-        dplyr::select(-one_of(names(annotation_row)))
+        dplyr::select(-one_of(names(annotation_row))) %>% 
+        dplyr::select(-Names)
+      
+      # Redeclare row names (as dplyr strips these)
+      row.names(annotation_row) <- row_names$Names
+      row.names(dissim) <- row_names$Names
+      
     } else {
-      dissim <- dissim %>%
+      combined_data <- bind_cols(dissim, row_names)
+      
+      # Arrange based on the user selected columm
+      sorted_data <- combined_data %>%
         arrange(!!sort_by_col)
+      
+      row_names <- combined_data %>% 
+        dplyr::select(Names)
+      
+      dissim <- sorted_data %>%
+        dplyr::select(-Names)
+      
+      # Redeclare row names (as dplyr strips these)
+      row.names(dissim) <- row_names$Names
     }
 
-    rownames(dissim) <- rownames(input_data)
+    # rownames(dissim) <- rownames(input_data)
   } 
   
   if(!is.null(annotation_row)){
@@ -1143,22 +1167,40 @@ pheatmap_cluster_by_col <- function(num_data, annotation_row, sort_col,
                                     main = "sense_check",
                                     ...){
   
+  # save row names as dplyr removes them
+  row_names <- row.names(num_data)
+  
   # Enclose the column name using tidy evaluation
   sort_col <- enquo(sort_col)
   
-  # Arrange the annotation data frame based on the sort column
-  annotation_row <- annotation_row %>% 
-    dplyr::arrange(!!sort_col)
-  
-  # Select the sort column to find the location for the gaps
+  # select the variable of interest for sorting
   col_of_interest <- annotation_row %>% 
     dplyr::select(!!sort_col)
   
-  # Create the gaps - dplyr ensures the rownames are as expected (arrange resets
-  # the first row to row 1 whereas order keeps the rownames as they originally 
-  # were - Hadley hates rownames, and rightly so)
-  gaps <- as.numeric(row.names(unique(col_of_interest))) - 1
+  # Create new order
+  new_order <- order(col_of_interest)
   
+  # Apply new order to annotation row and the data
+  num_data <- num_data[new_order, ]
+  annotation_row <- annotation_row[new_order, ]
+  row_names <- row_names[new_order]
+  
+  # print(col_of_interest)
+  
+  # Arrange the annotation data frame based on the sort column
+  # annotation_row <- annotation_row %>% 
+    # dplyr::arrange(!!sort_col)
+  
+  # Select the sort column to find the location for the gaps
+  col_of_interest <- annotation_row %>%
+    dplyr::select(!!sort_col)
+  
+  # Col of interest has row names, remove these and replace with numbers
+  row.names(col_of_interest) <- 1:nrow(col_of_interest)
+  
+  # Create the gaps for the heatmap for between certain rows
+  gaps <- as.numeric(row.names(unique(col_of_interest))) - 1
+
   # Create an empty vector to hold the new ordering
   ordering <- c()
   
@@ -1178,9 +1220,15 @@ pheatmap_cluster_by_col <- function(num_data, annotation_row, sort_col,
   }
   
   # Update the data and annotation data frames ordering
-  num_data <- num_data[ordering,]
-  annotation_row <- annotation_row[ordering,]
+  num_data <- num_data[ordering, ]
+  annotation_row <- annotation_row[ordering, ]
+  row_names <- row_names[ordering]
+
+  # Re-impose the row names to enable correct annotation
+  row.names(num_data) <- row_names
+  row.names(annotation_row) <- row_names
   
+  # Create gaps for the columns of the heatmap
   num_col_gaps <- ncol(num_data) - 1
   col_gaps <- 1:num_col_gaps
   
