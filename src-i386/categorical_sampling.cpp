@@ -2906,7 +2906,7 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
   double phi = arma::randg(arma::distr_param(a0, 1/b0) );
   
   // Declare normalising constant
-  double Z = 0.0;
+  double Z = 1.0;
   
   // Used in each iteration
   arma::vec curr_prob_vec_1(n_clust_1);
@@ -2957,6 +2957,8 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
     // sample the strategic latent variable, v
     v = arma::randg( arma::distr_param(n, 1/Z) );
     
+    // std::cout << "Latent variable calculated.\n";
+    
     clust_weights_1 = mdi_cluster_weights(clust_weight_priors_1,
                                           rate_0_1,
                                           v,
@@ -2977,6 +2979,8 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
                                           clust_labels_1,
                                           phi);
     
+    // std::cout << "Cluster weights calculated.\n";
+    
     // Entropy for graphing convergence
     entropy_cw(i) = entropy(clust_weights_1);
     
@@ -2996,6 +3000,8 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
                                               cat_count_2,
                                               n_clust_2,
                                               n_cols_2);
+    
+    // std::cout << "Context parameters calculated.\n";
     
     // sample the context similarity parameter (as only two contexts this is a
     // single double - number not a drink)
@@ -3071,54 +3077,54 @@ Rcpp::List mdi_cat_cat(arma::umat data_1,
     
     // std::cout << cluster_labels_categorical.n_elem << "\n"; 
     
-      // Update cluster labels in second dataset
-      // Return the new labels, weights and similarity in a single vector
-      labels_weights_phi = cluster_label_update(clust_labels_1,
-                                                clust_labels_2,
-                                                clust_weights_1,
-                                                clust_weights_2,
-                                                n_clust_1,
-                                                n_clust_2,
-                                                phi,
-                                                min_n_clust,
-                                                v,
-                                                n,
-                                                a0,
-                                                b0,
-                                                Z);
-      
-      // labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
-      //                                           cluster_labels_categorical,
-      //                                           cluster_weights_gaussian,
-      //                                           cluster_weights_categorical,
-      //                                           num_clusters_categorical,
-      //                                           context_similarity,
-      //                                           min_num_clusters,
-      //                                           v,
-      //                                           n,
-      //                                           a0,
-      //                                           b0);
-      
-      // Separate the output into the relevant components
-      
-      // std::cout << "Values calculated now sharing out\n";
-      clust_labels_2 = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
-      
-      // std::cout << "cluster labels updated \n";
-      
-      // std::cout <<"\nCluster weights before:\n" << cluster_weights_categorical << "\n";
-      
-      clust_weights_2 = labels_weights_phi.subvec(n, n + n_clust_2 - 1);
-      
-      // std::cout <<"\nCluster weights after:\n" << cluster_weights_categorical << "\n\n";
-      
-      // std::cout <<"cluster weights updated \n";
-      // std::cout <<"\nContext similarity before checking label swapping:\n" << context_similarity << "\n";
-      
-      phi = arma::as_scalar(labels_weights_phi(n + n_clust_2));
-      // std::cout <<"phi updated \n";
-      
-      // std::cout <<"\nContext similarity after label swapping:\n" << context_similarity << "\n\n";
+    // Update cluster labels in second dataset
+    // Return the new labels, weights and similarity in a single vector
+    labels_weights_phi = cluster_label_update(clust_labels_1,
+                                              clust_labels_2,
+                                              clust_weights_1,
+                                              clust_weights_2,
+                                              n_clust_1,
+                                              n_clust_2,
+                                              phi,
+                                              min_n_clust,
+                                              v,
+                                              n,
+                                              a0,
+                                              b0,
+                                              Z);
+    
+    // labels_weights_phi = cluster_label_update(cluster_labels_gaussian,
+    //                                           cluster_labels_categorical,
+    //                                           cluster_weights_gaussian,
+    //                                           cluster_weights_categorical,
+    //                                           num_clusters_categorical,
+    //                                           context_similarity,
+    //                                           min_num_clusters,
+    //                                           v,
+    //                                           n,
+    //                                           a0,
+    //                                           b0);
+    
+    // Separate the output into the relevant components
+    
+    // std::cout << "Values calculated now sharing out\n";
+    clust_labels_2 = arma::conv_to<arma::uvec>::from(labels_weights_phi.subvec(0, n - 1));
+    
+    // std::cout << "cluster labels updated \n";
+    
+    // std::cout <<"\nCluster weights before:\n" << cluster_weights_categorical << "\n";
+    
+    clust_weights_2 = labels_weights_phi.subvec(n, n + n_clust_2 - 1);
+    
+    // std::cout <<"\nCluster weights after:\n" << cluster_weights_categorical << "\n\n";
+    
+    // std::cout <<"cluster weights updated \n";
+    // std::cout <<"\nContext similarity before checking label swapping:\n" << context_similarity << "\n";
+    
+    phi = arma::as_scalar(labels_weights_phi(n + n_clust_2));
+    // std::cout <<"phi updated \n";
+    
+    // std::cout <<"\nContext similarity after label swapping:\n" << context_similarity << "\n\n";
     // }
       
     // if current iteration is a recorded iteration, save the labels
