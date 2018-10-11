@@ -746,11 +746,11 @@ mdi <- function(data_1, data_2, args_1, args_2,
   data_2 <- as.matrix(data_2)
 
   # Declare the cluster weights if not declared in advance
-  cluster_weight_0_1 <- declare_cluster_weights(n_clust_1,
+  cluster_weight_0_1 <- declare_cluster_weights(fix_vec_1, labels_0_1, n_clust_1, 
     weight_0 = cluster_weight_0_1
   )
 
-  cluster_weight_0_2 <- declare_cluster_weights(n_clust_2,
+  cluster_weight_0_2 <- declare_cluster_weights(fix_vec_2, labels_0_2, n_clust_2,
     weight_0 = cluster_weight_0_2
   )
 
@@ -843,7 +843,7 @@ mdi <- function(data_1, data_2, args_1, args_2,
     df_0_2 <- args_2$df_0
     scale_0_2 <- args_2$scale_0
     lambda_0_2 <- args_2$lambda_0
-
+    
     sim <- mdi_gauss_gauss(
       data_1,
       data_2,
@@ -954,19 +954,32 @@ thinning_warning <- function(thinning, num_iter, burn) {
 
 #' @title Declare cluster weights
 #' @description Creates a vector for the mass parameter for cluster weights.
+#' @param fix_vec Vector of 1's and 0's indicating if the corresponding entry in
+#' the data is a fixed label
+#' @param clust_labels A vector of unsigned integers representing the current 
+#' labelling of points in the data
 #' @param n_clust A unsigned integer; the number of clusters to be used in the
 #' clustering method.
 #' @param weight_0 One of an int or a p-vector where p = n_clust. If an int
 #' defaults to a p-vector of p repetitions of said int.
 #' @return A vector of values to be used as the mass parameters for the weights
 #' for the clusters.
-declare_cluster_weights <- function(n_clust, weight_0 = 0.1) {
-  if (length(weight_0) < n_clust) {
-    print(paste0(
-      "Creating vector of ", n_clust, " repetitions of ", weight_0,
-      " for mass parameter prior."
-    ))
-    weight_0 <- rep(weight_0, n_clust)
+declare_cluster_weights <- function(fix_vec, clust_labels, n_clust, 
+                                    weight_0 = NULL) {
+  if(any(fix_vec == 1) & is.null(weight_0)){
+    relevant_labels <- clust_labels[fix_vec == 1]
+    weight_0 <- unname(table(relevant_labels) / sum(table(relevant_labels)))
+  } else {
+    if(is.null(weight_0)) {
+      weight_0 <- 1
+    }
+    if (length(weight_0) < n_clust) {
+      print(paste0(
+        "Creating vector of ", n_clust, " repetitions of ", weight_0,
+        " for mass parameter prior."
+      ))
+      weight_0 <- rep(weight_0, n_clust)
+    }
   }
   weight_0
 }
