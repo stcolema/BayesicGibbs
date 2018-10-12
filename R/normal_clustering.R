@@ -165,11 +165,13 @@ cluster_weight_prior <- function(train_data, outlier = FALSE){
 #' @param record_posteriors A bool instructing the mcmc function to record the
 #' posterior distributions of the mean and variance for each cluster
 #' (default is FALSE)
-gibbs_sampling <- function(data, k, class_labels, fix_vec,
-                           d = NULL,
-                           N = NULL,
+gibbs_sampling <- function(data, k, class_labels,
+                           fix_vec = rep(F, nrow(data)),
+                           d = ncol(data),
+                           N = nrow(data),
                            num_iter = NULL,
-                           burn = 0,
+                           burn = NULL,
+                           thinning = 25,
                            mu_0 = NULL,
                            df_0 = NULL,
                            scale_0 = NULL,
@@ -182,20 +184,10 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
                            phi_0 = NULL,
                            c_clusters_label_0 = NULL,
                            num_clusters_cat = 100,
-                           thinning = 25,
                            outlier = FALSE,
                            t_df = 4.0,
                            record_posteriors = FALSE,
                            normalise = FALSE) {
-  if (is.null(d)) {
-    d <- ncol(data)
-  }
-
-  if (is.null(N)) {
-    N <- nrow(data)
-  }
-
-
   if (is.null(num_iter)) {
     num_iter <- min((d^2) * 1000 / sqrt(N), 10000)
   }
@@ -208,18 +200,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
     stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
   }
 
-  if (thinning > (num_iter - burn)) {
-    if (thinning > (num_iter - burn) & thinning < 5 * (num_iter - burn)) {
-      stop("Thinning factor exceeds iterations feasibly recorded. Stopping.")
-    } else if (thinning > 5 * (num_iter - burn) & thinning < 10 * (num_iter - burn)) {
-      stop("Thinning factor relatively large to effective iterations. Stopping algorithm.")
-    } else {
-      warning(paste0(
-        "Thinning factor relatively large to effective iterations.",
-        "\nSome samples recorded. Continuing but please check input"
-      ))
-    }
-  }
+  thinning_warning(thinning, num_iter, burn)
 
   data <- as.matrix(data)
 
@@ -231,22 +212,7 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
   scale_0 <- parameters_0$scale_0
 
   
-  # # Prior on mass parameter for cluster  weights
-  # if (is.null(concentration_0)) {
-  #   if(is.null(train) | isTRUE(train)){
-  #     concentration_0 <- cluster_weight_prior(mydata$markers, outlier = outlier)
-  #   } else {
-  #     concentration_0 <- rep(0.1, k + outlier)
-  #   }
-  # concentration_0 <- rep(0.1, (k + outlier))
-  # } else if (length(concentration_0) < (k + outlier)) {
-  #   print(paste0(
-  #     "Creating vector of ", k + outlier, " repetitions of ", concentration_0,
-  #     " for concentration prior."
-  #   ))
-  #   concentration_0 <- rep(concentration_0, k + outlier)
-  # }
-
+  # Prior on mass parameter for cluster  weights
   if (!is.null(cat_data)) {
     if (is.null(cluster_weight_priors_categorical)) {
       cluster_weight_priors_categorical <- rep(1, num_clusters_cat)
@@ -345,32 +311,15 @@ gibbs_sampling <- function(data, k, class_labels, fix_vec,
 #' the mcmc output.
 categorical_gibbs_sampling <- function(data,
                                        fix_vec = rep(F, nrow(data)),
-                                       d = NULL,
-                                       N = NULL,
+                                       d = ncol(data),
+                                       N = nrow(data),
                                        cluster_weight_priors_categorical = 1,
                                        phi_0 = NULL,
                                        c_clusters_label_0 = NULL,
                                        num_clusters_cat = NULL,
-                                       num_iter = NULL,
-                                       burn = 0,
+                                       num_iter = 10000,
+                                       burn =  floor(num_iter / 10),
                                        thinning = 25) {
-  if (is.null(d)) {
-    d <- ncol(data)
-  }
-
-  if (is.null(N)) {
-    N <- nrow(data)
-  }
-
-
-  if (is.null(num_iter)) {
-    num_iter <- 10000
-  }
-
-  if (is.null(burn)) {
-    burn <- floor(num_iter / 10)
-  }
-
   if (burn > num_iter) {
     stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
   }
@@ -483,7 +432,8 @@ mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
                                      N = NULL,
                                      fix_vec_cat = NULL,
                                      num_iter = NULL,
-                                     burn = 0,
+                                     burn = NULL,
+                                     thinning = 25,
                                      mu_0 = NULL,
                                      df_0 = NULL,
                                      scale_0 = NULL,
@@ -495,7 +445,6 @@ mdi_gauss_cat_clustering <- function(data, cat_data, k, class_labels, fix_vec,
                                      phi_0 = NULL,
                                      c_clusters_label_0 = NULL,
                                      num_clusters_cat = NULL,
-                                     thinning = 25,
                                      outlier = FALSE,
                                      t_df = 4.0,
                                      record_posteriors = FALSE,
@@ -681,16 +630,16 @@ mdi <- function(data_1, data_2, args_1, args_2,
                 n_clust_2 = 50,
                 labels_0_1 = NULL,
                 labels_0_2 = NULL,
-                d = NULL,
-                N = NULL,
+                d = ncol(data_1),
+                N = nrow(data_1),
                 a_0 = 1,
                 b_0 = 0.2,
-                fix_vec_1 = NULL,
-                fix_vec_2 = NULL,
-                cluster_weight_0_1 = 0.1,
-                cluster_weight_0_2 = 1,
+                fix_vec_1 = rep(0, nrow(data_1)),
+                fix_vec_2 = rep(0, nrow(data_2)),
+                cluster_weight_0_1 = NULL,
+                cluster_weight_0_2 = NULL,
                 num_iter = NULL,
-                burn = NULL,
+                burn = floor(num_iter / 10),
                 thinning = 25,
                 outlier_1 = FALSE,
                 t_df_1 = 4.0,
@@ -701,28 +650,8 @@ mdi <- function(data_1, data_2, args_1, args_2,
                 record_posteriors = FALSE) {
 
   # Calculate all the relevant parameters
-
-  # Dimensionality
-  if (is.null(d)) {
-    d <- ncol(data_1)
-  }
-
-  # Number of samples
-  if (is.null(N)) {
-    N <- nrow(data_1)
-  }
-
   if (N != nrow(data_2)) {
     stop("Unequal number of observations in datasets. Incomparable.\nStopping.")
-  }
-
-  # Vector of bools indicating labelling is not meaningful
-  if (is.null(fix_vec_1)) {
-    fix_vec_1 <- rep(F, N)
-  }
-
-  if (is.null(fix_vec_2)) {
-    fix_vec_2 <- rep(F, N)
   }
 
   # Arguments determining the number of MCMC samples generated and recorded
@@ -730,9 +659,9 @@ mdi <- function(data_1, data_2, args_1, args_2,
     num_iter <- min((d^2) * 1000 / sqrt(N), 10000)
   }
 
-  if (is.null(burn)) {
-    burn <- floor(num_iter / 10)
-  }
+  # if (is.null(burn)) {
+  #   burn <- floor(num_iter / 10)
+  # }
 
   if (burn > num_iter) {
     stop("Burn in exceeds total iterations. None will be recorded.\nStopping.")
@@ -770,8 +699,7 @@ mdi <- function(data_1, data_2, args_1, args_2,
       prob = cluster_weight_0_2
     )
   }
-
-
+  
   # Call the relevant MDI function
   if ((type_1 == "Gaussian" | type_1 == "G")
   & (type_2 == "Categorical" | type_2 == "C")) {
@@ -782,6 +710,8 @@ mdi <- function(data_1, data_2, args_1, args_2,
 
     phi_0 <- args_2$phi
 
+    # print()
+    
     sim <- mdi_gauss_cat(
       data_1,
       data_2,
@@ -1178,6 +1108,7 @@ annotated_heatmap <- function(input_data, annotation_row = NULL,
 
 pheatmap_cluster_by_col <- function(num_data, annotation_row, sort_col,
                                     main = "sense_check",
+                                    use_col_gaps = TRUE,
                                     ...){
   
   # save row names as dplyr removes them
@@ -1242,8 +1173,12 @@ pheatmap_cluster_by_col <- function(num_data, annotation_row, sort_col,
   row.names(annotation_row) <- row_names
   
   # Create gaps for the columns of the heatmap
-  num_col_gaps <- ncol(num_data) - 1
-  col_gaps <- 1:num_col_gaps
+  if(use_col_gaps){
+    num_col_gaps <- ncol(num_data) - 1
+    col_gaps <- 1:num_col_gaps
+  } else {
+    col_gaps <- 0
+  }
   
   # Heatmap
   annotated_heatmap(num_data, annotation_row,
@@ -1497,10 +1432,16 @@ mcmc_out <- function(MS_object,
 
   print("Gibbs sampling complete")
   # return(gibbs)
+  
+  if(is.null(cat_data)){
+    class_record <- gibbs$class_record
+  } else {
+    class_record <- gibbs$class_record_1
+  }
 
   # Create a dataframe for the predicted class
   class_allocation_table <- with(
-    stack(data.frame(t(gibbs$class_record))),
+    stack(data.frame(t(class_record))),
     table(ind, values)
   )
 
@@ -1568,7 +1509,13 @@ mcmc_out <- function(MS_object,
   if (heat_plot) {
 
     # dissimilarity matrix
-    dissim <- 1 - gibbs$similarity
+    if(is.null(cat_data)){
+      sim <- gibbs$similarity
+    } else {
+      sim <- gibbs$similarity_1
+    }
+    
+    dissim <- 1 - sim
 
     # Require names to associate data in annotation columns with original data
     colnames(dissim) <- rownames(num_data)
@@ -1790,3 +1737,6 @@ cluster_label_prior <- function(class_labels_0,
 #   # gghighlight(! Fixed, use_direct_label = FALSE) +
 #   NULL
 #
+
+
+

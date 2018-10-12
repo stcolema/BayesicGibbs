@@ -314,6 +314,32 @@ arma::vec concentration_n(arma::vec concentration_0,
   return concentration;
 }
 
+arma::vec concentration_n_class(arma::vec concentration_0,
+                                arma::uvec cluster_labels,
+                                arma::uword num_cat){
+  
+  // arma::uword n = cluster_labels.n_elem;
+  
+  arma::uword class_count = 0;
+  arma::vec concentration(num_cat);
+  
+  arma::uvec class_members;
+  
+  for (arma::uword i = 0; i < num_cat; i++) {
+    // class_count = 0;
+    class_members = find(cluster_labels == i);
+    class_count = class_members.n_elem;
+    // for (arma::uword j = 0; j < n; j++ ) {
+    //   if (cluster_labels(j) == i) {
+    //     class_count++;
+    //   }
+    // }
+    
+    concentration(i) = arma::as_scalar(concentration_0(i)) + class_count;
+  }
+  return concentration;
+}
+
 // sample parameters for a dirichlet distribution (normally for the clusters)
 // [[Rcpp::export]]
 arma::vec dirichlet_posterior(arma::vec concentration_0,
@@ -338,35 +364,8 @@ arma::vec dirichlet_posterior(arma::vec concentration_0,
   return cluster_weight;
 }
 
-//  TEST FUNCTIONS FOR CLASSES WITH NULL OF 0 //////////////////////////////////
-
-arma::vec concentration_n_class(arma::vec concentration_0,
-                          arma::uvec cluster_labels,
-                          arma::uword num_cat){
-  
-  // arma::uword n = cluster_labels.n_elem;
-  
-  arma::uword class_count = 0;
-  arma::vec concentration(num_cat);
-  
-  arma::uvec class_members;
-  
-  for (arma::uword i = 0; i < num_cat; i++) {
-    // class_count = 0;
-    class_members = find(cluster_labels == i);
-    class_count = class_members.n_elem;
-    // for (arma::uword j = 0; j < n; j++ ) {
-    //   if (cluster_labels(j) == i) {
-    //     class_count++;
-    //   }
-    // }
-    
-    concentration(i) = arma::as_scalar(concentration_0(i)) + class_count;
-  }
-  return concentration;
-}
-
-// Dirichlet posterior for class weights
+// Dirichlet posterior for class weights (difference of base 0 compared to vanilla
+// dirichlet_posterior function
 arma::vec dirichlet_posterior_class(arma::vec concentration_0,
                                     arma::uvec cluster_labels,
                                     arma::uword num_clusters){
@@ -389,6 +388,9 @@ arma::vec dirichlet_posterior_class(arma::vec concentration_0,
   cluster_weight = cluster_weight / total_cluster_weight;
   return cluster_weight;
 }
+
+
+//  TEST FUNCTIONS FOR CLASSES WITH NULL OF 0 //////////////////////////////////
 
 // MDI class weights (Gamma rather than dirichlet)
 arma::vec gamma_posterior(arma::vec concentration_0,
@@ -641,6 +643,8 @@ Rcpp::List categorical_clustering(arma::umat data,
   arma::umat record(n, eff_count);
   record.zeros();
   
+  // arma::uword prediction = 0;
+  
   // std::cout << "Reached for loop\n";
   
   for(arma::uword i = 0; i < num_iter; i++){
@@ -668,15 +672,16 @@ Rcpp::List categorical_clustering(arma::umat data,
       
       // sample cluster for each point here
       curr_cluster_probs = categorical_cluster_probabilities(data.row(j),
-                                               data,
-                                               class_probabilities,
-                                               cluster_weights,
-                                               num_clusters,
-                                               num_cols);
+                                                             data,
+                                                             class_probabilities,
+                                                             cluster_weights,
+                                                             num_clusters,
+                                                             num_cols);
       
       // std::cout << "Cluster sampled\n";
       
-      if(! fix_vec(j)){
+      if(fix_vec(j) == 0){
+        // std::cout << "Prediction: " << prediction << "\n";
         cluster_labels(j) = cluster_predictor(curr_cluster_probs);
       }
     }
@@ -1301,7 +1306,7 @@ Rcpp::List gaussian_clustering(arma::uword num_iter,
       //     curr_outlier_likelihood,
       //     k);
       
-      if(! fix_vec[jj]){
+      if(fix_vec[jj] == 0){
         
         class_labels(jj) = predicted_class;
         outlier_vec(jj) = predicted_outlier;
@@ -2285,10 +2290,10 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   
   // std::cout << "Context similarity: " << context_similarity << "\n";
   
-  return List::create(Named("similarity") = sim,
-                      Named("categorical_similarity") = cat_sim,
-                      Named("gaussian_class_record") = gaussian_record,
-                      Named("categorical_class_record") = categorical_record,
+  return List::create(Named("similarity_1") = sim,
+                      Named("similarity_2") = cat_sim,
+                      Named("class_record_1") = gaussian_record,
+                      Named("class_record_2") = categorical_record,
                       Named("context_similarity") = context_similarity_record,
                       Named("entropy") = entropy_cw,
                       Named("outlier") = outlier_probs_saved);
