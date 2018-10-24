@@ -1204,6 +1204,12 @@ Rcpp::List gaussian_clustering(arma::uword num_iter,
   double curr_outlier_likelihood = 0.0;
   arma::uword predicted_outlier = 0;
   double outlier_weight = 1 - sample_beta(u, v);
+
+  b_k = arma::find(outlier_vec == 0);
+  b = b_k.n_elem;
+  
+  outlier_weight = 1 - sample_beta(u + b, v + N - b);
+  
   
   // the predicted class assuming the point is not an outlier
   arma::uword predicted_class = 0;
@@ -1222,7 +1228,7 @@ Rcpp::List gaussian_clustering(arma::uword num_iter,
     
     // std::cout << "\nRelevant labels:\n" << relevant_labels << "\n";
     
-    class_weights = dirichlet_posterior(concentration_0, relevant_labels, k);
+    class_weights = dirichlet_posterior(concentration_0, class_labels, k);
     
     // std::cout << class_weights << "\n\n";
     // std::cout << "\nENTROPY";
@@ -2000,6 +2006,7 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   double curr_outlier_likelihood = 0.0;
   arma::uword predicted_outlier = 0;
   double outlier_weight = 1 - sample_beta(u_1, v_1);
+  
   // outlier_weight = 0.01;
   // the predicted class assuming the point is not an outlier
   arma::uword predicted_class = 0;
@@ -2016,8 +2023,6 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
   //                                    num_clusters_categorical);
   
   // std::cout << "b and outlier weight\n";
-  // b_k = arma::find(outlier_vec == 0);
-  // b = b_k.n_elem;
   
   
   // std::cout << "Declarations made. Take that King George.\n";
@@ -2090,8 +2095,8 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                                                    num_clusters_gaussian,
                                                    num_clusters_categorical,
                                                    cluster_weights_categorical,
-                                                   // cluster_labels_gaussian,
-                                                   relevant_labels,
+                                                   cluster_labels_gaussian,
+                                                   // relevant_labels,
                                                    cluster_labels_categorical,
                                                    context_similarity);
     
@@ -2137,6 +2142,10 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
                                     min_num_clusters,
                                     a0,
                                     b0);
+    
+    std::cout << "\nCluster weights:\n " << cluster_weights_gaussian 
+              << "\nOutlier weights:\n" << outlier_weight 
+              << "\n";
 
     // sample class for each observation
     
@@ -2192,28 +2201,36 @@ Rcpp::List mdi_gauss_cat(arma::mat gaussian_data,
         
         // std::cout << "Outlier likelihood calculated.\n";
         
-        curr_outlier_prob(1) = log(1 + exp(curr_outlier_likelihood));
+        // curr_outlier_prob(1) = log(1 + exp(curr_outlier_likelihood));
         
         // std::cout << "t likelihood OK!\n";
         
-        curr_outlier_prob(0)= curr_norm_likelihoods(predicted_class - 1) 
+        
+        
+        curr_outlier_prob(0) = curr_norm_likelihoods(predicted_class - 1) 
           + log(1 - outlier_weight)
-          - log(cluster_weights_gaussian(predicted_class - 1) + 1);
+          - log(cluster_weights_gaussian(predicted_class - 1));
         
         if(predicted_class == cluster_labels_categorical(j)){
           curr_outlier_prob(0) -= log(1 + context_similarity);
         }
           
           // std::cout << "normal likelihood OK!\n";
-        // std::cout << "\nOutlier probs pre-normalising:\n" << curr_outlier_prob 
-          // << "\n";
+        std::cout << "\nOutlier log-probs pre-normalising:\n" << curr_outlier_prob
+          << "\n";
         
         // Overflow handling
-        curr_outlier_prob = exp(curr_outlier_prob - max(curr_outlier_prob)) - 1;
+        curr_outlier_prob = exp(curr_outlier_prob - max(curr_outlier_prob));
+        
+        std::cout << "\nOutlier probs pre-normalising:\n" << curr_outlier_prob
+                  << "\n";
         
         // Normalise the vector
         curr_outlier_prob = curr_outlier_prob / sum(curr_outlier_prob);
         
+        
+        std::cout << "\nOutlier log-probs post-normalising:\n" << curr_outlier_prob
+                  << "\n";
         // curr_outlier_prob = over_flow_handling(curr_outlier_prob);
         
         
